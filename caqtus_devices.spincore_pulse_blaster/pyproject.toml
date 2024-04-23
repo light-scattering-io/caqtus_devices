@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "caqtus-devices-spincore-pulse-blaster"
+version = "1.0.0"
+description = ""
+authors = ["Dear <lechadoq@gmail.com>"]
+readme = "README.md"
+packages = [{include = "caqtus_devices"}]
+
+[tool.poetry.dependencies]
+python = "^3.11, <3.13"
+
+caqtus = {git = "https://github.com/light-scattering-io/caqtus.git"}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
