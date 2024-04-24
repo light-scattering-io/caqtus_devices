@@ -16,6 +16,7 @@ class SpincorePulseBlasterDeviceConfigEditor(
 
         self._board_number = QSpinBox()
         self._board_number.setRange(0, 100)
+        self._board_number.setValue(self.device_configuration.board_number)
         self.form.insertRow(1, "Board number", self._board_number)
 
     def get_configuration(self) -> SpincoreSequencerConfiguration:
