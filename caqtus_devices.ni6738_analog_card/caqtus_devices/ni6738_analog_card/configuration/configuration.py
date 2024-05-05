@@ -3,12 +3,15 @@ from __future__ import annotations
 from typing import ClassVar, Type
 
 import attrs
-
 from caqtus.device import DeviceName
 from caqtus.device.sequencer import SequencerConfiguration, AnalogChannelConfiguration
+from caqtus.device.sequencer.configuration import Constant
 from caqtus.device.sequencer.configuration.configuration import SequencerUpdateParams
+from caqtus.device.sequencer.trigger import SoftwareTrigger
 from caqtus.shot_compilation import SequenceContext, ShotContext
+from caqtus.types.expression import Expression
 from caqtus.utils import serialization
+
 from ..runtime import NI6738AnalogCard
 
 
@@ -70,4 +73,18 @@ class NI6738SequencerConfiguration(SequencerConfiguration[NI6738AnalogCard]):
     def load(cls, data: serialization.JSON) -> NI6738SequencerConfiguration:
         return serialization.converters["json"].structure(
             data, NI6738SequencerConfiguration
+        )
+
+    @classmethod
+    def default(cls) -> NI6738SequencerConfiguration:
+        return cls(
+            remote_server=None,
+            trigger=SoftwareTrigger(),
+            device_id="Dev1",
+            channels=tuple(
+                AnalogChannelConfiguration(
+                    description="", output_unit="V", output=Constant(Expression("0 V"))
+                )
+                for _ in range(cls.number_channels)
+            ),
         )
