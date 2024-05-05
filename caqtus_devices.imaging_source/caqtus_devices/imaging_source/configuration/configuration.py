@@ -3,11 +3,11 @@ from __future__ import annotations
 from typing import Literal, TYPE_CHECKING
 
 import attrs
-
 from caqtus.device import DeviceName
 from caqtus.device.camera import CameraConfiguration, CameraUpdateParams
 from caqtus.shot_compilation import ShotContext
 from caqtus.utils import serialization
+from caqtus.utils.roi import RectangularROI, Width, Height
 
 if TYPE_CHECKING:
     # noinspection PyUnresolvedReferences
@@ -32,6 +32,23 @@ class ImagingSourceCameraConfiguration(
         validator=attrs.validators.in_(["Y16", "Y800"]),
         on_setattr=attrs.setters.validate,
     )
+
+    @classmethod
+    def default(cls) -> ImagingSourceCameraConfiguration:
+        width = Width(1280)
+        height = Height(960)
+        return cls(
+            camera_name="DMK33GR0134",
+            format="Y16",
+            remote_server=None,
+            roi=RectangularROI(
+                width=width,
+                height=height,
+                x=0,
+                y=0,
+                original_image_size=(width, height),
+            ),
+        )
 
     def get_device_initialization_method(self, device_name, sequence_context):
         return (
