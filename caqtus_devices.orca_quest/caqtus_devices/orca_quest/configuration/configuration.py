@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import attrs
-
 from caqtus.device import DeviceName
 from caqtus.device.camera import (
     CameraConfiguration,
@@ -11,6 +10,7 @@ from caqtus.device.camera import (
 )
 from caqtus.shot_compilation import ShotContext
 from caqtus.utils import serialization
+from caqtus.utils.roi import RectangularROI, Width, Height
 
 if TYPE_CHECKING:
     # We avoid importing the runtime module because it imports the dcam dependency that
@@ -50,3 +50,17 @@ class OrcaQuestCameraConfiguration(CameraConfiguration["OrcaQuestCamera"]):
     @classmethod
     def load(cls, data: serialization.JSON) -> OrcaQuestCameraConfiguration:
         return serialization.structure(data, OrcaQuestCameraConfiguration)
+
+    @classmethod
+    def default(cls) -> OrcaQuestCameraConfiguration:
+        return OrcaQuestCameraConfiguration(
+            camera_number=0,
+            remote_server=None,
+            roi=RectangularROI(
+                original_image_size=(Width(4096), Height(2304)),
+                x=0,
+                y=0,
+                width=4096,
+                height=2304,
+            ),
+        )

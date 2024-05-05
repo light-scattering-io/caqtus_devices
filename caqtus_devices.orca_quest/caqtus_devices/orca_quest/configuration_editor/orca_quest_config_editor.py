@@ -34,17 +34,3 @@ class OrcaQuestConfigurationEditor(
     ) -> None:
         super().update_ui_from_config(device_config)
         self._camera_number_spinbox.setValue(device_config.camera_number)
-
-    @classmethod
-    def get_default_configuration(cls) -> OrcaQuestCameraConfiguration:
-        return OrcaQuestCameraConfiguration(
-            camera_number=0,
-            remote_server="default",
-            roi=RectangularROI(
-                original_image_size=(Width(4096), Height(2304)),
-                x=0,
-                y=0,
-                width=4096,
-                height=2304,
-            ),
-        )
