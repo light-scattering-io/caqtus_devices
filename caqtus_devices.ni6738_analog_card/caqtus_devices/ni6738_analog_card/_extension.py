@@ -6,5 +6,7 @@ ni6738_analog_card_extension = DeviceExtension(
     label="NI 6738 analog card",
     configuration_type=NI6738SequencerConfiguration,
     configuration_factory=NI6738SequencerConfiguration.default,
+    configuration_dumper=NI6738SequencerConfiguration.dump,
+    configuration_loader=NI6738SequencerConfiguration.load,
     editor_type=NI6738DeviceConfigEditor,
 )
