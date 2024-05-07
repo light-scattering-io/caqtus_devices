@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import ClassVar, Type, TYPE_CHECKING
+from typing import ClassVar, Type
 
 import attrs
-
 from caqtus.device import DeviceName
 from caqtus.device.sequencer import (
     SequencerConfiguration,
@@ -17,13 +16,11 @@ from caqtus.shot_compilation import SequenceContext, ShotContext
 from caqtus.types.expression import Expression
 from caqtus.utils import serialization
 
-if TYPE_CHECKING:
-    # noinspection PyUnresolvedReferences
-    from ..runtime import SpincorePulseBlaster
+from ..runtime import SpincorePulseBlaster
 
 
 @attrs.define
-class SpincoreSequencerConfiguration(SequencerConfiguration["SpincorePulseBlaster"]):
+class SpincoreSequencerConfiguration(SequencerConfiguration[SpincorePulseBlaster]):
     """Holds the static configuration of a spincore sequencer device.
 
     Fields:
