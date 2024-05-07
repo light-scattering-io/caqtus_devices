@@ -18,9 +18,6 @@ from caqtus.device.sequencer.instructions import (
 from caqtus.device.sequencer.runtime import Sequencer, Trigger, SoftwareTrigger
 from caqtus.utils import log_exception
 
-from . import spinapi
-from .spinapi import ns
-
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
 
@@ -80,29 +77,34 @@ class SpincorePulseBlaster(Sequencer, RuntimeDevice):
     def initialize(self) -> None:
         super().initialize()
 
-        spinapi.pb_set_debug(self.spincore_lib_debug)
+        from . import spinapi
 
-        board_count = spinapi.pb_count_boards()
+        self._spinapi = spinapi
+
+        self._spinapi.pb_set_debug(self.spincore_lib_debug)
+
+        board_count = self._spinapi.pb_count_boards()
         if self.board_number >= board_count:
             raise ConnectionError(
                 f"Can't access board {self.board_number}\nThere are only"
                 f" {board_count} boards"
             )
-        if spinapi.pb_select_board(self.board_number) != 0:
+        if self._spinapi.pb_select_board(self.board_number) != 0:
             raise ConnectionError(
-                f"Can't access board {self.board_number}\n{spinapi.pb_get_error()}"
+                f"Can't access board {self.board_number}\n{self._spinapi.pb_get_error()}"
             )
 
-        if spinapi.pb_init() != 0:
+        if self._spinapi.pb_init() != 0:
             raise ConnectionError(
-                f"Can't initialize board {self.board_number}\n{spinapi.pb_get_error()}"
+                f"Can't initialize board {self.board_number}\n{self._spinapi.pb_get_error()}"
             )
-        self._add_closing_callback(spinapi.pb_close)
+        self._add_closing_callback(self._spinapi.pb_close)
 
-        spinapi.pb_core_clock(1e3 / self.clock_cycle)
+        self._spinapi.pb_core_clock(1e3 / self.clock_cycle)
 
     @log_exception(logger)
     def update_parameters(self, sequence: SequencerInstruction) -> None:
+        spinapi = self._spinapi
         sequence_duration = len(sequence) * self.time_step * 1e-9
         logger.debug(f"{sequence_duration=}")
         if spinapi.pb_start_programming(spinapi.PULSE_PROGRAM) != 0:
@@ -136,7 +138,7 @@ class SpincorePulseBlaster(Sequencer, RuntimeDevice):
 
     @property
     def tick_duration(self) -> float:
-        return self.time_step * ns
+        return self.time_step * self._spinapi.ns
 
     @property
     def max_number_ticks(self) -> int:
@@ -144,9 +146,10 @@ class SpincorePulseBlaster(Sequencer, RuntimeDevice):
 
     @property
     def max_duration(self) -> float:
-        return self.max_number_ticks * self.time_step * ns
+        return self.max_number_ticks * self.time_step * self._spinapi.ns
 
     def _program_continue(self, output_: Sequence[bool], number_ticks: int):
+        spinapi = self._spinapi
         # break the duration into multiple long waits and one short wait
         number_of_repetitions, remainder = divmod(number_ticks, self.max_number_ticks)
 
@@ -168,7 +171,7 @@ class SpincorePulseBlaster(Sequencer, RuntimeDevice):
                     f" {self.max_duration / 2} s with"
                     f" {2*number_of_repetitions} repetitions. "
                 )
-        duration = remainder * self.time_step * ns
+        duration = remainder * self.time_step * spinapi.ns
         if spinapi.pb_inst_pbonly(flags, spinapi.Inst.CONTINUE, 0, duration) < 0:
             raise RuntimeError(
                 "An error occurred when programming a continue instruction with"
@@ -178,6 +181,7 @@ class SpincorePulseBlaster(Sequencer, RuntimeDevice):
     @_program_instruction.register
     @log_exception(logger)
     def _(self, repeat: Repeated):
+        spinapi = self._spinapi
         if len(repeat.instruction) == 1:
             channel_values = repeat.instruction.to_pattern()[0]
             outputs = [
@@ -204,7 +208,7 @@ class SpincorePulseBlaster(Sequencer, RuntimeDevice):
             )
         if (
             loop_beginning := spinapi.pb_inst_pbonly(
-                for_flag, spinapi.Inst.LOOP, rep, self.time_step * ns
+                for_flag, spinapi.Inst.LOOP, rep, self.time_step * spinapi.ns
             )
         ) < 0:
             raise RuntimeError(
@@ -219,7 +223,7 @@ class SpincorePulseBlaster(Sequencer, RuntimeDevice):
                 end_for_flag,
                 spinapi.Inst.END_LOOP,
                 loop_beginning,
-                self.time_step * ns,
+                self.time_step * spinapi.ns,
             )
             < 0
         ):
@@ -235,9 +239,15 @@ class SpincorePulseBlaster(Sequencer, RuntimeDevice):
             self._program_instruction(instruction)
 
     def program_stop(self, pattern: Mapping[str, bool]):
+        spinapi = self._spinapi
         outputs = [pattern[f"ch {channel}"] for channel in range(self.channel_number)]
         flags = self._output_to_flags(outputs)
-        if spinapi.pb_inst_pbonly(flags, spinapi.Inst.STOP, 0, self.time_step * ns) < 0:
+        if (
+            spinapi.pb_inst_pbonly(
+                flags, spinapi.Inst.STOP, 0, self.time_step * spinapi.ns
+            )
+            < 0
+        ):
             raise RuntimeError(
                 "An error occurred when programming the sequence. "
                 f"{spinapi.pb_get_error()}"
@@ -251,6 +261,7 @@ class SpincorePulseBlaster(Sequencer, RuntimeDevice):
 
     @log_exception(logger)
     def start_sequence(self) -> None:
+        spinapi = self._spinapi
         super().start_sequence()
         if spinapi.pb_reset() != 0:
             raise RuntimeError(f"Can't reset the board. {spinapi.pb_get_error()}")
@@ -260,6 +271,7 @@ class SpincorePulseBlaster(Sequencer, RuntimeDevice):
 
     @log_exception(logger)
     def has_sequence_finished(self) -> bool:
+        spinapi = self._spinapi
         super().has_sequence_finished()
         is_running = spinapi.pb_read_status() & SpincoreStatus.Running
         return not is_running
