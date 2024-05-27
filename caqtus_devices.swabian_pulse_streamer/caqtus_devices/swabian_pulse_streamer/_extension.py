@@ -1,5 +1,6 @@
 from caqtus.extension import DeviceExtension
 
+from ._compiler import SwabianPulseStreamerCompiler
 from .configuration import SwabianPulseStreamerConfiguration
 from .configuration_editor import SwabianPulseStreamerDeviceConfigEditor
 
@@ -10,4 +11,5 @@ swabian_pulse_streamer_extension = DeviceExtension(
     configuration_dumper=SwabianPulseStreamerConfiguration.dump,
     configuration_loader=SwabianPulseStreamerConfiguration.load,
     editor_type=SwabianPulseStreamerDeviceConfigEditor,
+    compiler_type=SwabianPulseStreamerCompiler,
 )

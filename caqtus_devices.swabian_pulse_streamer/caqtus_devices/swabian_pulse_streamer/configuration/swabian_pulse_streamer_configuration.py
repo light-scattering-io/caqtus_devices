@@ -1,16 +1,12 @@
-from collections.abc import Mapping
-from typing import ClassVar, Any, Self
+from typing import ClassVar, Self
 
 import attrs
-from caqtus.device import DeviceName
 from caqtus.device.sequencer import (
     SequencerConfiguration,
     DigitalChannelConfiguration,
 )
 from caqtus.device.sequencer.configuration import Constant
-from caqtus.device.sequencer.configuration.configuration import SequencerUpdateParams
 from caqtus.device.sequencer.trigger import SoftwareTrigger
-from caqtus.shot_compilation import SequenceContext, ShotContext
 from caqtus.types.expression import Expression
 from caqtus.utils import serialization
 
@@ -34,25 +30,6 @@ class SwabianPulseStreamerConfiguration(SequencerConfiguration[SwabianPulseStrea
     @classmethod
     def channel_types(cls) -> tuple[type[DigitalChannelConfiguration], ...]:
         return (DigitalChannelConfiguration,) * cls.number_channels
-
-    def get_device_initialization_method(
-        self, device_name: DeviceName, sequence_context: SequenceContext
-    ) -> Mapping[str, Any]:
-        return (
-            super()
-            .get_device_initialization_method(device_name, sequence_context)
-            .with_extra_parameters(
-                name=device_name,
-                ip_address=self.ip_address,
-            )
-        )
-
-    def compile_device_shot_parameters(
-        self,
-        device_name: DeviceName,
-        shot_context: ShotContext,
-    ) -> SequencerUpdateParams:
-        return super().compile_device_shot_parameters(device_name, shot_context)
 
     @classmethod
     def dump(cls, config: Self) -> serialization.JSON:
