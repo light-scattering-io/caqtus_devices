@@ -1,4 +1,6 @@
 from caqtus.extension import DeviceExtension
+
+from ._compiler import OrcaQuestCompiler
 from .configuration import OrcaQuestCameraConfiguration
 from .configuration_editor import OrcaQuestConfigurationEditor
 
@@ -9,4 +11,5 @@ orca_quest_extension = DeviceExtension(
     configuration_dumper=OrcaQuestCameraConfiguration.dump,
     configuration_loader=OrcaQuestCameraConfiguration.load,
     editor_type=OrcaQuestConfigurationEditor,
+    compiler_type=OrcaQuestCompiler,
 )
