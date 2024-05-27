@@ -1,5 +1,6 @@
 from caqtus.extension import DeviceExtension
 
+from .._compiler import SpincoreSequencerCompiler
 from ..configuration import SpincoreSequencerConfiguration
 from ..configuration_editor import SpincorePulseBlasterDeviceConfigEditor
 
@@ -10,6 +11,7 @@ spincore_pulse_blaster_extension = DeviceExtension(
     configuration_dumper=SpincoreSequencerConfiguration.dump,
     configuration_loader=SpincoreSequencerConfiguration.load,
     editor_type=SpincorePulseBlasterDeviceConfigEditor,
+    compiler_type=SpincoreSequencerCompiler,
 )
 
 __all__ = ["spincore_pulse_blaster_extension"]

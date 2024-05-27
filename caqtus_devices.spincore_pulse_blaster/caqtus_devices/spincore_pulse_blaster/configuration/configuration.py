@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import ClassVar, Type
 
 import attrs
-from caqtus.device import DeviceName
 from caqtus.device.sequencer import (
     SequencerConfiguration,
     ChannelConfiguration,
@@ -11,8 +10,6 @@ from caqtus.device.sequencer import (
     SoftwareTrigger,
 )
 from caqtus.device.sequencer.configuration import Constant
-from caqtus.device.sequencer.configuration.configuration import SequencerUpdateParams
-from caqtus.shot_compilation import SequenceContext, ShotContext
 from caqtus.types.expression import Expression
 from caqtus.utils import serialization
 
@@ -53,22 +50,6 @@ class SpincoreSequencerConfiguration(SequencerConfiguration[SpincorePulseBlaster
         validator=attrs.validators.ge(50),
         on_setattr=attrs.setters.pipe(attrs.setters.convert, attrs.setters.validate),
     )
-
-    def get_device_initialization_method(
-        self, device_name: DeviceName, sequence_context: SequenceContext
-    ):
-        return (
-            super()
-            .get_device_initialization_method(device_name, sequence_context)
-            .with_extra_parameters(name=device_name, board_number=self.board_number)
-        )
-
-    def compile_device_shot_parameters(
-        self,
-        device_name: DeviceName,
-        shot_context: ShotContext,
-    ) -> SequencerUpdateParams:
-        return super().compile_device_shot_parameters(device_name, shot_context)
 
     @classmethod
     def dump(cls, configuration: SpincoreSequencerConfiguration) -> serialization.JSON:
