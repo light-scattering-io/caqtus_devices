@@ -1,4 +1,6 @@
 from caqtus.extension import DeviceExtension
+
+from ._compiler import NI6738SequencerCompiler
 from .configuration import NI6738SequencerConfiguration
 from .configuration_editor import NI6738DeviceConfigEditor
 
@@ -9,4 +11,5 @@ ni6738_analog_card_extension = DeviceExtension(
     configuration_dumper=NI6738SequencerConfiguration.dump,
     configuration_loader=NI6738SequencerConfiguration.load,
     editor_type=NI6738DeviceConfigEditor,
+    compiler_type=NI6738SequencerCompiler,
 )
