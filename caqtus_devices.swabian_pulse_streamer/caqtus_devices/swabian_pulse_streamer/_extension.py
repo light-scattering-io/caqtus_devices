@@ -1,3 +1,4 @@
+from caqtus.device.sequencer import SequencerController, SequencerProxy
 from caqtus.extension import DeviceExtension
 
 from ._compiler import SwabianPulseStreamerCompiler
@@ -12,4 +13,6 @@ swabian_pulse_streamer_extension = DeviceExtension(
     configuration_loader=SwabianPulseStreamerConfiguration.load,
     editor_type=SwabianPulseStreamerDeviceConfigEditor,
     compiler_type=SwabianPulseStreamerCompiler,
+    controller_type=SequencerController,
+    proxy_type=SequencerProxy,
 )
