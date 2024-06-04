@@ -1,3 +1,4 @@
+from caqtus.device.sequencer import SequencerController, SequencerProxy
 from caqtus.extension import DeviceExtension
 
 from ._compiler import NI6738SequencerCompiler
@@ -12,4 +13,6 @@ ni6738_analog_card_extension = DeviceExtension(
     configuration_loader=NI6738SequencerConfiguration.load,
     editor_type=NI6738DeviceConfigEditor,
     compiler_type=NI6738SequencerCompiler,
+    controller_type=SequencerController,
+    proxy_type=SequencerProxy,
 )
