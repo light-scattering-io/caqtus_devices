@@ -1,3 +1,4 @@
+from caqtus.device.camera import CameraController, CameraProxy
 from caqtus.extension import DeviceExtension
 
 from ._compiler import OrcaQuestCompiler
@@ -12,4 +13,6 @@ orca_quest_extension = DeviceExtension(
     configuration_loader=OrcaQuestCameraConfiguration.load,
     editor_type=OrcaQuestConfigurationEditor,
     compiler_type=OrcaQuestCompiler,
+    controller_type=CameraController,
+    proxy_type=CameraProxy,
 )
