@@ -1,22 +1,18 @@
 from __future__ import annotations
 
-from typing import Literal, TYPE_CHECKING
+from typing import Literal
 
 import attrs
-from caqtus.device import DeviceName
-from caqtus.device.camera import CameraConfiguration, CameraUpdateParams
-from caqtus.shot_compilation import ShotContext
+from caqtus.device.camera import CameraConfiguration
 from caqtus.utils import serialization
 from caqtus.utils.roi import RectangularROI, Width, Height
 
-if TYPE_CHECKING:
-    # noinspection PyUnresolvedReferences
-    from ..runtime import ImagingSourceCameraDMK33GR0134
+from ..runtime import ImagingSourceCameraDMK33GR0134
 
 
 @attrs.define
 class ImagingSourceCameraConfiguration(
-    CameraConfiguration["ImagingSourceCameraDMK33GR0134"]
+    CameraConfiguration[ImagingSourceCameraDMK33GR0134]
 ):
     """Holds the configuration for a camera from The Imaging Source.
 
@@ -49,25 +45,6 @@ class ImagingSourceCameraConfiguration(
                 original_image_size=(width, height),
             ),
         )
-
-    def get_device_initialization_method(self, device_name, sequence_context):
-        return (
-            super()
-            .get_device_initialization_method(device_name, sequence_context)
-            .with_extra_parameters(
-                name=device_name,
-                camera_name=self.camera_name,
-                format=self.format,
-                timeout=1,
-            )
-        )
-
-    def compile_device_shot_parameters(
-        self,
-        device_name: DeviceName,
-        shot_context: ShotContext,
-    ) -> CameraUpdateParams:
-        return super().compile_device_shot_parameters(device_name, shot_context)
 
     @classmethod
     def dump(cls, config: ImagingSourceCameraConfiguration) -> serialization.JSON:
