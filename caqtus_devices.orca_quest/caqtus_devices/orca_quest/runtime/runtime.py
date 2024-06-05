@@ -46,8 +46,8 @@ class OrcaQuestCamera(Camera, RuntimeDevice):
     def initialize(self) -> None:
         # We only do the import when initializing the camera because it requires a
         # specific library that is not always available.
-        import dcam
-        import dcamapi4
+        from . import dcam
+        from . import dcamapi4
 
         self.dcam = dcam
         self.dcamapi4 = dcamapi4
