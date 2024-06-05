@@ -33,7 +33,7 @@ class OrcaQuestCamera(Camera, RuntimeDevice):
 
     camera_number: int = field(validator=instance_of(int), on_setattr=frozen)
 
-    _camera: dcam.Dcam = field(init=False)
+    _camera: "dcam.Dcam" = field(init=False)
     _buffer_number_pictures: Optional[int] = field(init=False, default=None)
 
     def _read_last_error(self) -> str:
