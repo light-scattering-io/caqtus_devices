@@ -4,9 +4,11 @@ from caqtus.extension import DeviceExtension
 from ._compiler import NI6738SequencerCompiler
 from .configuration import NI6738SequencerConfiguration
 from .configuration_editor import NI6738DeviceConfigEditor
+from .runtime import NI6738AnalogCard
 
 ni6738_analog_card_extension = DeviceExtension(
     label="NI 6738 analog card",
+    device_type=NI6738AnalogCard,
     configuration_type=NI6738SequencerConfiguration,
     configuration_factory=NI6738SequencerConfiguration.default,
     configuration_dumper=NI6738SequencerConfiguration.dump,
