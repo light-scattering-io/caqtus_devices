@@ -109,7 +109,6 @@ class SwabianPulseStreamer(Sequencer, RuntimeDevice):
             for channel in range(self.channel_number)
             if last_values[f"ch {channel}"]
         ]
-        logger.debug(last_values)
         self._final_state = OutputState(enabled_output, 0.0, 0.0)
         self._set_sequence_programmed()
 
