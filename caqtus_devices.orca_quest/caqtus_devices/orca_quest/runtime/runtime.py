@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar, Optional, TYPE_CHECKING
 
 from attrs import define, field
 from attrs.setters import frozen
@@ -10,11 +10,11 @@ from caqtus.device.camera import Camera, CameraTimeoutError
 from caqtus.types.image import Image
 from caqtus.utils import log_exception
 
-from .dcam import Dcamapi, Dcam, DCAM_IDSTR
-from .dcamapi4 import DCAM_IDPROP, DCAMPROP, DCAMERR
-
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
+
+if TYPE_CHECKING:
+    import dcam
 
 
 @define(slots=False)
@@ -33,29 +33,36 @@ class OrcaQuestCamera(Camera, RuntimeDevice):
 
     camera_number: int = field(validator=instance_of(int), on_setattr=frozen)
 
-    _camera: Dcam = field(init=False)
+    _camera: dcam.Dcam = field(init=False)
     _buffer_number_pictures: Optional[int] = field(init=False, default=None)
 
     def _read_last_error(self) -> str:
-        return DCAMERR(self._camera.lasterr()).name
+        return self.dcam.DCAMERR(self._camera.lasterr()).name
 
     def update_parameters(self, timeout: float) -> None:
         self.timeout = timeout
 
     @log_exception(logger)
     def initialize(self) -> None:
+        # We only do the import when initializing the camera because it requires a
+        # specific library that is not always available.
+        import dcam
+        import dcamapi4
+
+        self.dcam = dcam
+        self.dcamapi4 = dcamapi4
         super().initialize()
-        if Dcamapi.init():
-            self._add_closing_callback(Dcamapi.uninit)
+        if self.dcam.Dcamapi.init():
+            self._add_closing_callback(self.dcam.Dcamapi.uninit)
         else:
             # If this error occurs, check that the dcam-api from hamamatsu is installed
             # https://dcam-api.com/
             raise ImportError(
-                f"Failed to initialize DCAM-API: {Dcamapi.lasterr().name}"
+                f"Failed to initialize DCAM-API: {self.dcam.Dcamapi.lasterr().name}"
             )
 
-        if self.camera_number < Dcamapi.get_devicecount():
-            self._camera = Dcam(self.camera_number)
+        if self.camera_number < self.dcam.Dcamapi.get_devicecount():
+            self._camera = self.dcam.Dcam(self.camera_number)
         else:
             raise RuntimeError(f"Could not find camera {str(self.camera_number)}")
 
@@ -66,18 +73,20 @@ class OrcaQuestCamera(Camera, RuntimeDevice):
         self._add_closing_callback(self._camera.dev_close)
         logger.info(f"{self.name}: successfully opened camera {self.camera_number}")
 
-        if not self._camera.prop_setvalue(DCAM_IDPROP.SUBARRAYMODE, DCAMPROP.MODE.OFF):
+        if not self._camera.prop_setvalue(
+            self.dcamapi4.DCAM_IDPROP.SUBARRAYMODE, self.dcamapi4.DCAMPROP.MODE.OFF
+        ):
             raise RuntimeError(
                 f"can't set subarray mode off: {self._read_last_error()}"
             )
 
         properties = {
-            DCAM_IDPROP.SUBARRAYHPOS: self.roi.x,
-            DCAM_IDPROP.SUBARRAYHSIZE: self.roi.width,
-            DCAM_IDPROP.SUBARRAYVPOS: self.roi.y,
-            DCAM_IDPROP.SUBARRAYVSIZE: self.roi.height,
-            DCAM_IDPROP.SENSORMODE: DCAMPROP.SENSORMODE.AREA,
-            DCAM_IDPROP.TRIGGER_GLOBALEXPOSURE: DCAMPROP.TRIGGER_GLOBALEXPOSURE.DELAYED,
+            self.dcamapi4.DCAM_IDPROP.SUBARRAYHPOS: self.roi.x,
+            self.dcamapi4.DCAM_IDPROP.SUBARRAYHSIZE: self.roi.width,
+            self.dcamapi4.DCAM_IDPROP.SUBARRAYVPOS: self.roi.y,
+            self.dcamapi4.DCAM_IDPROP.SUBARRAYVSIZE: self.roi.height,
+            self.dcamapi4.DCAM_IDPROP.SENSORMODE: self.dcamapi4.DCAMPROP.SENSORMODE.AREA,
+            self.dcamapi4.DCAM_IDPROP.TRIGGER_GLOBALEXPOSURE: self.dcamapi4.DCAMPROP.TRIGGER_GLOBALEXPOSURE.DELAYED,
         }
 
         if self.external_trigger:
@@ -88,9 +97,15 @@ class OrcaQuestCamera(Camera, RuntimeDevice):
             # However, the trigger received by the camera must be clean.
             # If it bounces, the acquisition will be messed up.
             # To prevent bouncing, it might be necessary to add a 50 Ohm resistor before the camera trigger input.
-            properties[DCAM_IDPROP.TRIGGERSOURCE] = DCAMPROP.TRIGGERSOURCE.EXTERNAL
-            properties[DCAM_IDPROP.TRIGGERACTIVE] = DCAMPROP.TRIGGERACTIVE.LEVEL
-            properties[DCAM_IDPROP.TRIGGERPOLARITY] = DCAMPROP.TRIGGERPOLARITY.POSITIVE
+            properties[self.dcamapi4.DCAM_IDPROP.TRIGGERSOURCE] = (
+                self.dcamapi4.DCAMPROP.TRIGGERSOURCE.EXTERNAL
+            )
+            properties[self.dcamapi4.DCAM_IDPROP.TRIGGERACTIVE] = (
+                self.dcamapi4.DCAMPROP.TRIGGERACTIVE.LEVEL
+            )
+            properties[self.dcamapi4.DCAM_IDPROP.TRIGGERPOLARITY] = (
+                self.dcamapi4.DCAMPROP.TRIGGERPOLARITY.POSITIVE
+            )
         else:
             raise NotImplementedError("Only external trigger is supported")
             # Need to handle different exposures when using internal trigger, so it is not implemented yet.
@@ -104,7 +119,9 @@ class OrcaQuestCamera(Camera, RuntimeDevice):
                     f" {self._read_last_error()}"
                 )
 
-        if not self._camera.prop_setvalue(DCAM_IDPROP.SUBARRAYMODE, DCAMPROP.MODE.ON):
+        if not self._camera.prop_setvalue(
+            self.dcamapi4.DCAM_IDPROP.SUBARRAYMODE, self.dcamapi4.DCAMPROP.MODE.ON
+        ):
             raise RuntimeError(f"can't set subarray mode on: {self._read_last_error()}")
 
         if not self._camera.buf_alloc(10):
@@ -161,13 +178,20 @@ class OrcaQuestCamera(Camera, RuntimeDevice):
 
     @classmethod
     def list_camera_infos(cls) -> list[dict[str, Any]]:
+        import dcam
+        import dcamapi4
+
         result = []
-        for camera_index in range(Dcamapi.get_devicecount()):
+        for camera_index in range(dcam.Dcamapi.get_devicecount()):
             infos = {}
-            camera = Dcam(camera_index)
-            infos["id"] = camera.dev_getstring(DCAM_IDSTR.CAMERAID)
-            infos["model"] = camera.dev_getstring(DCAM_IDSTR.MODEL)
-            infos["camera version"] = camera.dev_getstring(DCAM_IDSTR.CAMERAVERSION)
-            infos["driver version"] = camera.dev_getstring(DCAM_IDSTR.DRIVERVERSION)
+            camera = dcam.Dcam(camera_index)
+            infos["id"] = camera.dev_getstring(dcamapi4.DCAM_IDSTR.CAMERAID)
+            infos["model"] = camera.dev_getstring(dcamapi4.DCAM_IDSTR.MODEL)
+            infos["camera version"] = camera.dev_getstring(
+                dcamapi4.DCAM_IDSTR.CAMERAVERSION
+            )
+            infos["driver version"] = camera.dev_getstring(
+                dcamapi4.DCAM_IDSTR.DRIVERVERSION
+            )
             result.append(infos)
         return result
