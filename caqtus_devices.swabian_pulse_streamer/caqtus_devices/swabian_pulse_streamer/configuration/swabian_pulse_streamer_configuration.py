@@ -5,7 +5,7 @@ from caqtus.device.sequencer import (
     SequencerConfiguration,
     DigitalChannelConfiguration,
 )
-from caqtus.device.sequencer.configuration import Constant
+from caqtus.device.sequencer.channel_commands import Constant
 from caqtus.device.sequencer.trigger import SoftwareTrigger
 from caqtus.types.expression import Expression
 from caqtus.utils import serialization

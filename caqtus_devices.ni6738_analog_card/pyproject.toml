@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "caqtus-devices-ni6738-analog-card"
-version = "1.5.0"
+version = "1.5.1"
 description = ""
 authors = ["Dear <lechadoq@gmail.com>"]
 readme = "README.md"
@@ -11,7 +11,7 @@ python = "^3.11, <3.13"
 
 nidaqmx = ">=0.9.0"
 
-caqtus = { git = "https://github.com/light-scattering-io/caqtus.git" }
+caqtus = { git = "https://github.com/light-scattering-io/caqtus.git" , version=">=2.0.0"}
 
 
 [build-system]
