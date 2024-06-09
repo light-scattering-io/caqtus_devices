@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "caqtus-devices-swabian-pulse-streamer"
-version = "1.6.2"
+version = "1.6.3"
 description = ""
 authors = ["Dear <lechadoq@gmail.com>"]
 readme = "README.md"
@@ -11,7 +11,7 @@ python = "^3.11, <3.13"
 
 pulsestreamer = ">=1.7.0"
 
-caqtus = { git = "https://github.com/light-scattering-io/caqtus.git", version = ">=2.0.0" }
+caqtus = { git = "https://github.com/light-scattering-io/caqtus.git" }
 
 
 [build-system]
