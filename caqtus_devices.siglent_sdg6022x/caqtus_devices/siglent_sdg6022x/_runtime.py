@@ -20,6 +20,7 @@ class ChannelState(abc.ABC):
         validator=attrs.validators.in_([50, "High Z"])
     )
 
+    @abc.abstractmethod
     def apply(self, instr: pyvisa.resources.Resource) -> None:
         self.set_output(instr)
 
@@ -33,6 +34,34 @@ class ChannelState(abc.ABC):
         command = f"{self.prefix()}OUTP {output},LOAD,{load},PLRT,{polarity}"
         logger.debug("Sending command %r", command)
         instr.write(command)
+
+
+@attrs.define
+class SinWave(ChannelState):
+    """
+    Attributes:
+        frequency: The frequency of the sine wave in Hz.
+        amplitude: Peak-to-peak amplitude of the sine wave in V.
+        offset: The DC offset of the sine wave in V.
+    """
+
+    frequency: float = attrs.field(converter=float)
+    amplitude: float = attrs.field(converter=float)
+    offset: float = attrs.field(converter=float)
+
+    def apply(self, instr: pyvisa.resources.Resource) -> None:
+        for command in self.commands():
+            logger.debug("Sending command %r", command)
+            instr.write(command)
+        super().apply(instr)
+
+    def commands(self) -> list[str]:
+        return [
+            f"{self.prefix()}BSWV WVTP,SINE",
+            f"{self.prefix()}BSWV FRQ,{self.frequency}",
+            f"{self.prefix()}BSWV AMP,{self.amplitude}",
+            f"{self.prefix()}BSWV OFST,{self.offset}",
+        ]
 
 
 @attrs.define
@@ -105,7 +134,21 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     with SiglentSDG6022X("TCPIP0::192.168.137.164::inst0::INSTR") as siglent:
         state = SiglentState(
-            channel_0=ChannelState(channel=0, output_enabled=True, load="High Z"),
-            channel_1=ChannelState(channel=1, output_enabled=True, load=50),
+            channel_0=SinWave(
+                channel=0,
+                frequency=1e6,
+                amplitude=1,
+                offset=0,
+                load=50,
+                output_enabled=False,
+            ),
+            channel_1=SinWave(
+                channel=1,
+                frequency=10,
+                amplitude=1,
+                offset=0,
+                load=50,
+                output_enabled=False,
+            ),
         )
         siglent.update_state(state)
