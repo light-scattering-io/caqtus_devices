@@ -10,7 +10,12 @@ packages = [{include = "caqtus_devices"}]
 python = "^3.11, <3.13"
 caqtus = {git = "https://github.com/light-scattering-io/caqtus.git"}
 pyvisa = "^1.14.1"
+attrs = "^23.2.0"
+cattrs = "^23.2.3"
 
+
+[tool.poetry.group.test.dependencies]
+pytest = "^8.2.2"
 
 [build-system]
 requires = ["poetry-core"]
