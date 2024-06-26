@@ -57,9 +57,7 @@ class SiglentSDG6022XConfiguration(DeviceConfiguration[SiglentSDG6022X]):
     """
 
     resource_name: str = attrs.field(converter=str, on_setattr=attrs.setters.convert)
-    channels: tuple[ChannelConfiguration, ChannelConfiguration] = attrs.field(
-        on_setattr=attrs.setters.frozen
-    )
+    channels: tuple[ChannelConfiguration, ChannelConfiguration] = attrs.field()
 
     @classmethod
     def default(cls) -> SiglentSDG6022XConfiguration:
