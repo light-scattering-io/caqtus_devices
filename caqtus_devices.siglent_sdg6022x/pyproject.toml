@@ -16,6 +16,7 @@ cattrs = "^23.2.3"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^8.2.2"
+pytest-qt = "^4.4.0"
 
 
 [tool.poetry.group.dev.dependencies]

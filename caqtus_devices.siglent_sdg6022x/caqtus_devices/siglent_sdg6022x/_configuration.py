@@ -77,7 +77,7 @@ class SiglentSDG6022XConfiguration(DeviceConfiguration[SiglentSDG6022X]):
         return converter.unstructure(self)
 
 
-converter = serialization.converters["json"].copy()
+converter = serialization.copy_converter()
 
 
 def unstructure_channel_configuration(obj: ChannelConfiguration) -> serialization.JSON:
