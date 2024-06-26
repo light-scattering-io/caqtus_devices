@@ -1,7 +1,6 @@
 import abc
 import contextlib
 import logging
-import time
 from typing import Self, Literal
 
 import attrs
@@ -12,7 +11,7 @@ from caqtus.device import Device
 logger = logging.getLogger(__name__)
 
 
-@attrs.define
+@attrs.frozen
 class ChannelState(abc.ABC):
     channel: int
     output_enabled: bool = attrs.field(validator=attrs.validators.instance_of(bool))
@@ -36,7 +35,7 @@ class ChannelState(abc.ABC):
         instr.write(command)
 
 
-@attrs.define
+@attrs.frozen
 class SinWave(ChannelState):
     """
     Attributes:
@@ -64,20 +63,22 @@ class SinWave(ChannelState):
         ]
 
 
-@attrs.define
+@attrs.frozen
 class SiglentState:
     """State of a Siglent SDG6022X arbitrary waveform generator."""
 
-    channel_0: ChannelState = attrs.field(
+    channel_0: ChannelState | Literal["ignore"] = attrs.field(
         validator=attrs.validators.instance_of(ChannelState)
     )
-    channel_1: ChannelState = attrs.field(
+    channel_1: ChannelState | Literal["ignore"] = attrs.field(
         validator=attrs.validators.instance_of(ChannelState)
     )
 
     def apply(self, instr: pyvisa.resources.Resource) -> None:
-        self.channel_0.apply(instr)
-        self.channel_1.apply(instr)
+        if self.channel_0 != "ignore":
+            self.channel_0.apply(instr)
+        if self.channel_1 != "ignore":
+            self.channel_1.apply(instr)
 
 
 class SiglentSDG6022X(Device):
@@ -118,37 +119,10 @@ class SiglentSDG6022X(Device):
         return self
 
     def update_state(self, state: SiglentState) -> None:
-        t0 = time.perf_counter()
         state.apply(self._instr)
-        t1 = time.perf_counter()
-        logger.info("Updated to state %s in %.3f s", state, t1 - t0)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         return self._exit_stack.__exit__(exc_type, exc_val, exc_tb)
 
     def write_command(self, command: str) -> None:
         self._instr.write(command)
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    with SiglentSDG6022X("TCPIP0::192.168.137.164::inst0::INSTR") as siglent:
-        state = SiglentState(
-            channel_0=SinWave(
-                channel=0,
-                frequency=1e6,
-                amplitude=1,
-                offset=0,
-                load=50,
-                output_enabled=False,
-            ),
-            channel_1=SinWave(
-                channel=1,
-                frequency=10,
-                amplitude=1,
-                offset=0,
-                load=50,
-                output_enabled=False,
-            ),
-        )
-        siglent.update_state(state)
