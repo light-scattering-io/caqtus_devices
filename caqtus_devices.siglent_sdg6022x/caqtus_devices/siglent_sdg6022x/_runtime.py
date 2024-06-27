@@ -89,7 +89,6 @@ class SiglentSDG6022X(Device):
     """
 
     def __init__(self, resource_name: str):
-        super().__init__()
         self._resource_name = resource_name
 
         self._exit_stack = contextlib.ExitStack()
