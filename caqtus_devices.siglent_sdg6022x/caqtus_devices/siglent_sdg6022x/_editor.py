@@ -87,8 +87,8 @@ class ChannelConfigEditor(QWidget):
             self.ignore_button.setChecked(True)
         else:
             self.sine_wave_button.setChecked(True)
-            self.sine_editor.setVisible(True)
             self.sine_editor.apply(config)
+        self.sine_editor.setVisible(self.sine_wave_button.isChecked())
 
     def read_config(self) -> ChannelConfiguration:
         if self.ignore_button.isChecked():
