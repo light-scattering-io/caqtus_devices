@@ -38,10 +38,10 @@ class SiglentSDG6022XCompiler(DeviceCompiler):
     def compile_shot_parameters(self, shot_context: ShotContext):
         siglent_state = SiglentState(
             channel_0=compile_channel_state(
-                self.configuration.channels[0], shot_context
+                self.configuration.channels[0], shot_context, 0
             ),
             channel_1=compile_channel_state(
-                self.configuration.channels[1], shot_context
+                self.configuration.channels[1], shot_context, 1
             ),
         )
         return {
