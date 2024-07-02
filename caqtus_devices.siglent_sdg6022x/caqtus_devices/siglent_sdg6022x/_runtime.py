@@ -4,9 +4,12 @@ import logging
 from typing import Self, Literal
 
 import attrs
+import caqtus.formatter as fmt
 import pyvisa
 import pyvisa.constants
 from caqtus.device import Device
+from caqtus.types.recoverable_exceptions import ConnectionFailedError
+from caqtus.utils.contextlib import close_on_error
 
 logger = logging.getLogger(__name__)
 
@@ -96,26 +99,29 @@ class SiglentSDG6022X(Device):
         self._instr: pyvisa.resources.Resource
 
     def __enter__(self) -> Self:
-        try:
+        with close_on_error(self._exit_stack):
             self._resource_manager = self._exit_stack.enter_context(
                 contextlib.closing(pyvisa.ResourceManager())
             )
             logger.info("Acquired VISA resource manager")
-            self._instr = self._exit_stack.enter_context(
-                contextlib.closing(
-                    self._resource_manager.open_resource(
-                        self._resource_name,
-                        access_mode=pyvisa.constants.AccessModes.exclusive_lock,
+            try:
+                self._instr = self._exit_stack.enter_context(
+                    contextlib.closing(
+                        self._resource_manager.open_resource(
+                            self._resource_name,
+                            access_mode=pyvisa.constants.AccessModes.exclusive_lock,
+                        )
                     )
                 )
-            )
+            except pyvisa.errors.VisaIOError as e:
+                raise ConnectionFailedError(
+                    f"Failed to connect to siglent SDG6022X with "
+                    f"{fmt.device_param('resource name', self._resource_name)}"
+                ) from e
             logger.info("Connected to %s", self._resource_name)
             device_identification = self._instr.query("*IDN?")
             logger.info("Device identification: %s", device_identification)
-        except:
-            self._exit_stack.close()
-            raise
-        return self
+            return self
 
     def update_state(self, state: SiglentState) -> None:
         state.apply(self._instr)

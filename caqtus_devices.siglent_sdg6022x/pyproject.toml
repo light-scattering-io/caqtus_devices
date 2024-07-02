@@ -1,13 +1,13 @@
 [tool.poetry]
 name = "caqtus-devices-siglent-sdg6022x"
-version = "1.0.1"
+version = "2.0.0"
 description = ""
 authors = ["Dear <lechadoq@gmail.com>"]
 readme = "README.md"
 packages = [{include = "caqtus_devices"}]
 
 [tool.poetry.dependencies]
-python = "^3.11, <3.13"
+python = "^3.12, <3.13"
 caqtus = {git = "https://github.com/light-scattering-io/caqtus.git"}
 pyvisa = "^1.14.1"
 attrs = "^23.2.0"
