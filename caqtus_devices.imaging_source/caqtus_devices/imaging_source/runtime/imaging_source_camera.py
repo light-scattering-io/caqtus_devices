@@ -18,7 +18,10 @@ import numpy
 from caqtus.device import RuntimeDevice
 from caqtus.device.camera import Camera, CameraTimeoutError
 from caqtus.types.image import Image
-from caqtus.types.recoverable_exceptions import ConnectionFailedError
+from caqtus.types.recoverable_exceptions import (
+    ConnectionFailedError,
+    RecoverableException,
+)
 from caqtus.utils.contextlib import close_on_error
 
 from . import tisgrabber as tis
@@ -185,7 +188,7 @@ class ImagingSourceCameraDMK33GR0134(Camera, RuntimeDevice):
         return formatted_image[roi]
 
 
-class FailedToStartLive(RecoverableError):
+class FailedToStartLive(RecoverableException):
     """Raised when the camera failed to start live."""
 
     pass
