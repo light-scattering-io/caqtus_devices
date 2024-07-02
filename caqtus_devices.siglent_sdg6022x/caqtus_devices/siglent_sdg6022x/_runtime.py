@@ -112,7 +112,7 @@ class SiglentSDG6022X(Device):
             logger.info("Connected to %s", self._resource_name)
             device_identification = self._instr.query("*IDN?")
             logger.info("Device identification: %s", device_identification)
-        except Exception:
+        except:
             self._exit_stack.close()
             raise
         return self
