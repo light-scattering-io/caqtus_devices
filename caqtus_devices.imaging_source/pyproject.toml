@@ -1,13 +1,13 @@
 [tool.poetry]
 name = "caqtus-devices-imaging-source"
-version = "1.4.0"
+version = "1.5.0"
 description = ""
 authors = ["Dear <lechadoq@gmail.com>"]
 readme = "README.md"
 packages = [{include = "caqtus_devices"}]
 
 [tool.poetry.dependencies]
-python = "^3.11, <3.13"
+python = "^3.12, <3.13"
 
 caqtus = { git = "https://github.com/light-scattering-io/caqtus.git" }
 

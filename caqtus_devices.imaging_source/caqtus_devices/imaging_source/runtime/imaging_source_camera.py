@@ -13,10 +13,13 @@ import os
 from typing import Literal, ClassVar, Optional
 
 import attrs
+import caqtus.formatter as fmt
 import numpy
 from caqtus.device import RuntimeDevice
 from caqtus.device.camera import Camera, CameraTimeoutError
 from caqtus.types.image import Image
+from caqtus.types.recoverable_exceptions import ConnectionFailedError
+from caqtus.utils.contextlib import close_on_error
 
 from . import tisgrabber as tis
 
@@ -82,23 +85,27 @@ class ImagingSourceCameraDMK33GR0134(Camera, RuntimeDevice):
 
     def initialize(self):
         super().initialize()
-        self._grabber_handle = ic.IC_CreateGrabber()
-        self._close_stack.callback(ic.IC_ReleaseGrabber, self._grabber_handle)
+        with close_on_error(self._close_stack):
+            self._grabber_handle = ic.IC_CreateGrabber()
+            self._close_stack.callback(ic.IC_ReleaseGrabber, self._grabber_handle)
 
-        ic.IC_OpenDevByUniqueName(self._grabber_handle, tis.T(self.camera_name))
-        if not ic.IC_IsDevValid(self._grabber_handle):
-            raise RuntimeError(f"Camera {self.camera_name} not found")
+            ic.IC_OpenDevByUniqueName(self._grabber_handle, tis.T(self.camera_name))
+            if not ic.IC_IsDevValid(self._grabber_handle):
+                raise ConnectionFailedError(
+                    f"Could not find camera with "
+                    f"{fmt.device_param('camera name', self.camera_name)}"
+                )
 
-        self._set_format(self.format)
-        self._set_trigger(self.external_trigger)
+            self._set_format(self.format)
+            self._set_trigger(self.external_trigger)
 
-        self._start_live()
-        self._add_closing_callback(self._stop_live)
+            self._start_live()
+            self._add_closing_callback(self._stop_live)
 
     def _start_live(self) -> None:
         if not ic.IC_StartLive(self._grabber_handle, 0):
-            error = RuntimeError(f"Failed to start live for {self}")
-            error.add_note("Check that the camera is not open by another program")
+            error = FailedToStartLive("Failed to start live acquisition")
+            error.add_note("Maybe check that the camera is not open by another program")
             raise error
 
     def _stop_live(self) -> None:
@@ -176,6 +183,12 @@ class ImagingSourceCameraDMK33GR0134(Camera, RuntimeDevice):
             slice(self.roi.y, self.roi.y + self.roi.height),
         )
         return formatted_image[roi]
+
+
+class FailedToStartLive(RecoverableError):
+    """Raised when the camera failed to start live."""
+
+    pass
 
 
 def _reformat_image(image: numpy.ndarray, format_: str) -> numpy.ndarray:
