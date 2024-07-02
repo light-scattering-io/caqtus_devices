@@ -66,15 +66,23 @@ class SinWave(ChannelState):
         ]
 
 
+def _channel_validator(instance, attribute, value):
+    if value == "ignore":
+        return
+    if isinstance(value, ChannelState):
+        return
+    raise ValueError(f"Expected ChannelState or 'ignore', got {value!r}")
+
+
 @attrs.frozen
 class SiglentState:
     """State of a Siglent SDG6022X arbitrary waveform generator."""
 
     channel_0: ChannelState | Literal["ignore"] = attrs.field(
-        validator=attrs.validators.instance_of(ChannelState)
+        validator=_channel_validator
     )
     channel_1: ChannelState | Literal["ignore"] = attrs.field(
-        validator=attrs.validators.instance_of(ChannelState)
+        validator=_channel_validator
     )
 
     def apply(self, instr: pyvisa.resources.Resource) -> None:
