@@ -1,13 +1,13 @@
 [tool.poetry]
 name = "caqtus-devices-swabian-pulse-streamer"
-version = "1.6.3"
+version = "1.7.0"
 description = ""
 authors = ["Dear <lechadoq@gmail.com>"]
 readme = "README.md"
 packages = [{ include = "caqtus_devices" }]
 
 [tool.poetry.dependencies]
-python = "^3.11, <3.13"
+python = "^3.12, <3.13"
 
 pulsestreamer = ">=1.7.0"
 

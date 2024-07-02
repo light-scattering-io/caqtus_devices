@@ -28,6 +28,7 @@ from pulsestreamer import (
     OutputState,
     ClockSource,
 )
+from caqtus.types.recoverable_exceptions import ConnectionFailedError
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +72,12 @@ class SwabianPulseStreamer(Sequencer, RuntimeDevice):
 
         # There is no close method for the PulseStreamer class
         self._pulse_streamer = PulseStreamer(self.ip_address)
+        try:
+            self._pulse_streamer.getFirmwareVersion()
+        except IOError as e:
+            raise ConnectionFailedError(
+                f"Could not connect to swabian pulse streamer at {self.ip_address}"
+            ) from e
         self.setup_trigger()
         if self.clock_source == "internal":
             self._pulse_streamer.selectClock(ClockSource.INTERNAL)
