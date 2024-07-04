@@ -4,11 +4,17 @@ from caqtus.extension import DeviceExtension
 from ._compiler import ImagingSourceCameraCompiler
 from .configuration import ImagingSourceCameraConfiguration
 from .configuration_editor import ImagingSourceCameraConfigurationEditor
-from .runtime import ImagingSourceCameraDMK33GR0134
+
+
+def create_new_imaging_source_camera(*args, **kwargs):
+    from .runtime import ImagingSourceCameraDMK33GR0134
+
+    return ImagingSourceCameraDMK33GR0134(*args, **kwargs)
+
 
 imaging_source_extension = DeviceExtension(
     label="Imaging Source camera",
-    device_type=ImagingSourceCameraDMK33GR0134,
+    device_type=create_new_imaging_source_camera,
     configuration_type=ImagingSourceCameraConfiguration,
     configuration_factory=ImagingSourceCameraConfiguration.default,
     configuration_dumper=ImagingSourceCameraConfiguration.dump,
