@@ -1,18 +1,20 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, TYPE_CHECKING
 
 import attrs
 from caqtus.device.camera import CameraConfiguration
 from caqtus.utils import serialization
 from caqtus.utils.roi import RectangularROI, Width, Height
 
-from ..runtime import ImagingSourceCameraDMK33GR0134
+
+if TYPE_CHECKING:
+    from ..runtime import ImagingSourceCameraDMK33GR0134
 
 
 @attrs.define
 class ImagingSourceCameraConfiguration(
-    CameraConfiguration[ImagingSourceCameraDMK33GR0134]
+    CameraConfiguration["ImagingSourceCameraDMK33GR0134"]
 ):
     """Holds the configuration for a camera from The Imaging Source.
 
