@@ -9,6 +9,7 @@ from caqtus.utils.roi import RectangularROI, Width, Height
 
 
 if TYPE_CHECKING:
+    # noinspection PyUnresolvedReferences
     from ..runtime import ImagingSourceCameraDMK33GR0134
 
 

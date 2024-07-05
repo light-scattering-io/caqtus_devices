@@ -17,6 +17,7 @@ from caqtus.device.sequencer.instructions import (
 )
 from caqtus.device.sequencer.runtime import Sequencer, Trigger, SoftwareTrigger
 from caqtus.utils import log_exception
+from caqtus.types.recoverable_exceptions import ConnectionFailedError
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -85,17 +86,17 @@ class SpincorePulseBlaster(Sequencer, RuntimeDevice):
 
         board_count = self._spinapi.pb_count_boards()
         if self.board_number >= board_count:
-            raise ConnectionError(
+            raise ConnectionFailedError(
                 f"Can't access board {self.board_number}\nThere are only"
                 f" {board_count} boards"
             )
         if self._spinapi.pb_select_board(self.board_number) != 0:
-            raise ConnectionError(
+            raise ConnectionFailedError(
                 f"Can't access board {self.board_number}\n{self._spinapi.pb_get_error()}"
             )
 
         if self._spinapi.pb_init() != 0:
-            raise ConnectionError(
+            raise ConnectionFailedError(
                 f"Can't initialize board {self.board_number}\n{self._spinapi.pb_get_error()}"
             )
         self._add_closing_callback(self._spinapi.pb_close)
