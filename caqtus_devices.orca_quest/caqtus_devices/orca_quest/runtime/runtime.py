@@ -1,16 +1,17 @@
+import contextlib
 import logging
 import time
-from typing import Any, ClassVar, Optional, TYPE_CHECKING
+from typing import Any, ClassVar, Optional, TYPE_CHECKING, Self
 
 from attrs import define, field
 from attrs.setters import frozen
 from attrs.validators import instance_of
-from caqtus.device import RuntimeDevice
 from caqtus.device.camera import Camera, CameraTimeoutError
 from caqtus.types.image import Image
 from caqtus.utils import log_exception
-from . import dcam, dcamapi4
+from caqtus.utils.contextlib import close_on_error
 
+from . import dcam, dcamapi4
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -20,7 +21,7 @@ if TYPE_CHECKING:
 
 
 @define(slots=False)
-class OrcaQuestCamera(Camera, RuntimeDevice):
+class OrcaQuestCamera(Camera):
     """
 
     Beware that not all roi values are allowed for this camera.
@@ -37,6 +38,7 @@ class OrcaQuestCamera(Camera, RuntimeDevice):
 
     _camera: "dcam.Dcam" = field(init=False)
     _buffer_number_pictures: Optional[int] = field(init=False, default=None)
+    _exit_stack = field(init=False, factory=contextlib.ExitStack)
 
     def _read_last_error(self) -> str:
         return dcam.DCAMERR(self._camera.lasterr()).name
@@ -44,11 +46,18 @@ class OrcaQuestCamera(Camera, RuntimeDevice):
     def update_parameters(self, timeout: float) -> None:
         self.timeout = timeout
 
+    def __enter__(self) -> Self:
+        with close_on_error(self._exit_stack):
+            self._initialize()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        return self._exit_stack.__exit__(exc_type, exc_value, traceback)
+
     @log_exception(logger)
-    def initialize(self) -> None:
-        super().initialize()
+    def _initialize(self) -> None:
         if dcam.Dcamapi.init():
-            self._add_closing_callback(dcam.Dcamapi.uninit)
+            self._exit_stack.callback(dcam.Dcamapi.uninit)
         else:
             # If this error occurs, check that the dcam-api from hamamatsu is installed
             # https://dcam-api.com/
@@ -63,10 +72,9 @@ class OrcaQuestCamera(Camera, RuntimeDevice):
 
         if not self._camera.dev_open():
             raise RuntimeError(
-                f"Failed to open camera {self.name}: {self._read_last_error()}"
+                f"Failed to open camera {self.camera_number}: {self._read_last_error()}"
             )
-        self._add_closing_callback(self._camera.dev_close)
-        logger.info(f"{self.name}: successfully opened camera {self.camera_number}")
+        self._exit_stack.callback(self._camera.dev_close)
 
         if not self._camera.prop_setvalue(
             dcamapi4.DCAM_IDPROP.SUBARRAYMODE, dcamapi4.DCAMPROP.MODE.OFF
@@ -88,10 +96,12 @@ class OrcaQuestCamera(Camera, RuntimeDevice):
             # The Camera is set to acquire images when the trigger is high.
             # This allows changing the exposure by changing the trigger duration and
             # without having to communicate with the camera.
-            # With this it is possible to change the exposure of two very close pictures.
+            # With this it is possible to change the exposure of two very close
+            # pictures.
             # However, the trigger received by the camera must be clean.
             # If it bounces, the acquisition will be messed up.
-            # To prevent bouncing, it might be necessary to add a 50 Ohm resistor before the camera trigger input.
+            # To prevent bouncing, it might be necessary to add a 50 Ohm resistor
+            # before the camera trigger input.
             properties[
                 dcamapi4.DCAM_IDPROP.TRIGGERSOURCE
             ] = dcamapi4.DCAMPROP.TRIGGERSOURCE.EXTERNAL
@@ -103,14 +113,15 @@ class OrcaQuestCamera(Camera, RuntimeDevice):
             ] = dcamapi4.DCAMPROP.TRIGGERPOLARITY.POSITIVE
         else:
             raise NotImplementedError("Only external trigger is supported")
-            # Need to handle different exposures when using internal trigger, so it is not implemented yet.
+            # Need to handle different exposures when using internal trigger, so it is
+            # not implemented yet.
             # properties[DCAM_IDPROP.TRIGGERSOURCE] = DCAMPROP.TRIGGERSOURCE.INTERNAL
 
         for property_id, property_value in properties.items():
             if not self._camera.prop_setvalue(property_id, property_value):
                 raise RuntimeError(
                     f"Failed to set property {str(property_id)} to"
-                    f" {str(property_value)} for {self.name}:"
+                    f" {str(property_value)}:"
                     f" {self._read_last_error()}"
                 )
 
@@ -123,7 +134,7 @@ class OrcaQuestCamera(Camera, RuntimeDevice):
             raise RuntimeError(
                 f"Failed to allocate buffer for images: {self._read_last_error()}"
             )
-        self._add_closing_callback(self._camera.buf_release)
+        self._exit_stack.callback(self._camera.buf_release)
 
     def _start_acquisition(self, exposures: list[float]) -> None:
         if not self._camera.cap_start(bSequence=True):
