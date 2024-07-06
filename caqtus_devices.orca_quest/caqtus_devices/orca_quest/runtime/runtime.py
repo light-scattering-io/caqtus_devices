@@ -1,23 +1,20 @@
 import contextlib
 import logging
 import time
-from typing import Any, ClassVar, Optional, TYPE_CHECKING, Self
+from typing import Any, ClassVar, Optional, Self
 
 from attrs import define, field
 from attrs.setters import frozen
 from attrs.validators import instance_of
 from caqtus.device.camera import Camera, CameraTimeoutError
 from caqtus.types.image import Image
+from caqtus.types.recoverable_exceptions import ConnectionFailedError
 from caqtus.utils import log_exception
 from caqtus.utils.contextlib import close_on_error
 
 from . import dcam, dcamapi4
 
 logger = logging.getLogger(__name__)
-logger.setLevel("DEBUG")
-
-if TYPE_CHECKING:
-    import dcam
 
 
 @define(slots=False)
@@ -68,10 +65,12 @@ class OrcaQuestCamera(Camera):
         if self.camera_number < dcam.Dcamapi.get_devicecount():
             self._camera = dcam.Dcam(self.camera_number)
         else:
-            raise RuntimeError(f"Could not find camera {str(self.camera_number)}")
+            raise ConnectionFailedError(
+                f"Could not find camera {str(self.camera_number)}"
+            )
 
         if not self._camera.dev_open():
-            raise RuntimeError(
+            raise ConnectionFailedError(
                 f"Failed to open camera {self.camera_number}: {self._read_last_error()}"
             )
         self._exit_stack.callback(self._camera.dev_close)
@@ -120,8 +119,7 @@ class OrcaQuestCamera(Camera):
         for property_id, property_value in properties.items():
             if not self._camera.prop_setvalue(property_id, property_value):
                 raise RuntimeError(
-                    f"Failed to set property {str(property_id)} to"
-                    f" {str(property_value)}:"
+                    f"Failed to set property {property_id} to {property_value}:"
                     f" {self._read_last_error()}"
                 )
 
