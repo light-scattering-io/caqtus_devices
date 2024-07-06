@@ -141,13 +141,11 @@ class ImagingSourceCameraDMK33GR0134(Camera):
             ic.IC_EnableTrigger(self._grabber_handle, int(external_trigger))
             != tis.IC_SUCCESS
         ):
-            raise RuntimeError(
-                f"Failed to set trigger mode to {external_trigger} for {self}"
-            )
+            raise RuntimeError(f"Failed to set trigger mode to {external_trigger}")
 
     def _set_format(self, format_: Literal["Y16", "Y800"]):
         if not ic.IC_SetFormat(self._grabber_handle, _MAP_FORMAT[format_]):
-            raise RuntimeError(f"Failed to set format for {self}")
+            raise RuntimeError(f"Failed to set format")
 
     def _set_exposure(self, exposure: float):
         ic.IC_SetPropertyAbsoluteValue(
@@ -161,7 +159,7 @@ class ImagingSourceCameraDMK33GR0134(Camera):
         timeout = int(self.timeout * 1e3)
         result = ic.IC_SnapImage(self._grabber_handle, timeout)
         if result != tis.IC_SUCCESS:
-            raise CameraTimeoutError(f"Failed to acquire picture for {self}")
+            raise CameraTimeoutError(f"Failed to acquire picture")
 
     def _read_picture_from_camera(self) -> numpy.ndarray:
         width = ctypes.c_long()
