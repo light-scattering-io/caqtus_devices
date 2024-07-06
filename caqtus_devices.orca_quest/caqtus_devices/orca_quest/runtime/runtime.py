@@ -16,6 +16,8 @@ from . import dcam, dcamapi4
 
 logger = logging.getLogger(__name__)
 
+BUFFER_SIZE = 10
+
 
 @define(slots=False)
 class OrcaQuestCamera(Camera):
@@ -128,28 +130,41 @@ class OrcaQuestCamera(Camera):
         ):
             raise RuntimeError(f"can't set subarray mode on: {self._read_last_error()}")
 
-        if not self._camera.buf_alloc(10):
+        if not self._camera.buf_alloc(BUFFER_SIZE):
             raise RuntimeError(
                 f"Failed to allocate buffer for images: {self._read_last_error()}"
             )
         self._exit_stack.callback(self._camera.buf_release)
 
-    def _start_acquisition(self, exposures: list[float]) -> None:
-        if not self._camera.cap_start(bSequence=True):
-            raise RuntimeError(
-                f"Can't start acquisition for {self}: {self._read_last_error()}"
+    @contextlib.contextmanager
+    def acquire(self, exposures: list[float]):
+        if len(exposures) > BUFFER_SIZE:
+            raise ValueError(
+                f"Can't acquire {len(exposures)} images, the maximum number of images"
+                f" that can be acquired is {BUFFER_SIZE}"
             )
+        self._start_acquisition()
+        try:
+            yield self._read_images(exposures)
+        finally:
+            self._stop_acquisition()
 
-    def _read_image(self, exposure: float) -> Image:
-        # Should change the exposure time if not in gated mode
-        # self._camera.prop_setvalue(DCAM_IDPROP.EXPOSURETIME, new_exposure)
-        return self._acquire_picture(self.timeout)
+    def _start_acquisition(self) -> None:
+        if not self._camera.cap_start(bSequence=True):
+            raise RuntimeError(f"Can't start acquisition: {self._read_last_error()}")
 
     def _stop_acquisition(self) -> None:
         if not self._camera.cap_stop():
-            raise RuntimeError(
-                f"Failed to stop acquisition for {self}: {self._read_last_error()}"
-            )
+            raise RuntimeError(f"Failed to stop acquisition: {self._read_last_error()}")
+
+    def _read_images(self, exposures: list[float]):
+        # Should change the exposure time if using internal trigger, but don't need to
+        # do it know as we only support external trigger.
+        # self._camera.prop_setvalue(DCAM_IDPROP.EXPOSURETIME, new_exposure)
+
+        for frame, _ in enumerate(exposures):
+            image = self._acquire_picture(frame)
+            yield image
 
     def list_properties(self) -> list:
         result = []
@@ -161,24 +176,25 @@ class OrcaQuestCamera(Camera):
             property_id = self._camera.prop_getnextid(property_id)
         return result
 
-    def _acquire_picture(self, timeout: float) -> Image:
-        start_acquire = time.time()
+    def _acquire_picture(self, frame: int) -> Image:
+        start_acquire = time.monotonic()
         while True:
             if self._camera.wait_capevent_frameready(1):
-                data = self._camera.buf_getlastframedata()
-                return data.T
+                image = self._camera.buf_getframedata(frame)
+                return image.T
             error = self._camera.lasterr()
             if error.is_timeout():
-                if time.time() - start_acquire > self.timeout:
+                elapsed = time.monotonic() - start_acquire
+                if elapsed < self.timeout:
+                    continue
+                else:
                     raise CameraTimeoutError(
-                        f"{self.name} timed out after {timeout*1e3:.0f} ms without"
-                        f" receiving a trigger"
+                        f"Timed out after {self.timeout*1e3:.0f} ms without receiving "
+                        f"a trigger"
                     )
-                continue
+
             else:
-                raise RuntimeError(
-                    f"An error occurred during acquisition for {self}: {error}"
-                )
+                raise RuntimeError(f"An error occurred during acquisition: {error}")
 
     @classmethod
     def list_camera_infos(cls) -> list[dict[str, Any]]:
