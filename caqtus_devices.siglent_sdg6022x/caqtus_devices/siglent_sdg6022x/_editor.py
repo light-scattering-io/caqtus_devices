@@ -112,8 +112,14 @@ class SineWaveOutputEditor(QWidget, Ui_SineEditor):
             self.loadComboBox.setCurrentText("High Z")
         else:
             assert_never(config.load)
+        if not isinstance(config.frequency, Expression):
+            raise NotImplementedError
         self.frequencyLineEdit.setText(str(config.frequency))
+        if not isinstance(config.amplitude, Expression):
+            raise NotImplementedError
         self.amplitudeLineEdit.setText(str(config.amplitude))
+        if not isinstance(config.offset, Expression):
+            raise NotImplementedError
         self.offsetLineEdit.setText(str(config.offset))
 
     def read_config(self) -> SineWaveOutput:

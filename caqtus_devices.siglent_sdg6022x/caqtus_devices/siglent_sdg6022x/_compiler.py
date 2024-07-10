@@ -1,6 +1,8 @@
 from typing import Literal, assert_never
 
+import caqtus.formatter as fmt
 from caqtus.device import DeviceName, DeviceParameter
+from caqtus.device.output_transform import evaluate
 from caqtus.shot_compilation import (
     DeviceCompiler,
     SequenceContext,
@@ -8,7 +10,8 @@ from caqtus.shot_compilation import (
     ShotContext,
 )
 from caqtus.types.parameter import magnitude_in_unit
-from caqtus.types.units import Quantity
+from caqtus.types.recoverable_exceptions import InvalidTypeError
+from caqtus.types.units import Quantity, DimensionalityError
 
 from ._configuration import (
     SiglentSDG6022XConfiguration,
@@ -63,20 +66,42 @@ def compile_channel_state(
 def compile_sinewave_output(
     sine_wave_output: SineWaveOutput, shot_context: ShotContext, channel: int
 ) -> ChannelState:
-    amplitude = sine_wave_output.amplitude.evaluate(shot_context.get_variables())
+    amplitude = evaluate(sine_wave_output.amplitude, shot_context.get_variables())
     if not isinstance(amplitude, Quantity):
-        raise TypeError(f"Expected amplitude to be a Quantity, got {type(amplitude)}")
-    amplitude_magnitude = magnitude_in_unit(amplitude, "V")
+        raise InvalidTypeError(
+            f"Expected amplitude to be a Quantity, got {type(amplitude)}"
+        )
+    try:
+        amplitude_magnitude = magnitude_in_unit(amplitude, "V")
+    except DimensionalityError as e:
+        raise InvalidTypeError(
+            f"Invalid dimensionality when evaluating "
+            f"{fmt.expression(sine_wave_output.amplitude)}"
+        ) from e
 
-    frequency = sine_wave_output.frequency.evaluate(shot_context.get_variables())
+    frequency = evaluate(sine_wave_output.frequency, shot_context.get_variables())
     if not isinstance(frequency, Quantity):
-        raise TypeError(f"Expected frequency to be a Quantity, got {type(frequency)}")
-    frequency_magnitude = magnitude_in_unit(frequency, "Hz")
+        raise InvalidTypeError(
+            f"Expected frequency to be a Quantity, got {type(frequency)}"
+        )
+    try:
+        frequency_magnitude = magnitude_in_unit(frequency, "Hz")
+    except DimensionalityError as e:
+        raise InvalidTypeError(
+            f"Invalid dimensionality when evaluating "
+            f"{fmt.expression(sine_wave_output.frequency)}"
+        ) from e
 
-    offset = sine_wave_output.offset.evaluate(shot_context.get_variables())
+    offset = evaluate(sine_wave_output.offset, shot_context.get_variables())
     if not isinstance(offset, Quantity):
-        raise TypeError(f"Expected offset to be a Quantity, got {type(offset)}")
-    offset_magnitude = magnitude_in_unit(offset, "V")
+        raise InvalidTypeError(f"Expected offset to be a Quantity, got {type(offset)}")
+    try:
+        offset_magnitude = magnitude_in_unit(offset, "V")
+    except DimensionalityError as e:
+        raise InvalidTypeError(
+            f"Invalid dimensionality when evaluating "
+            f"{fmt.expression(sine_wave_output.offset)}"
+        ) from e
 
     return SinWave(
         frequency=frequency_magnitude,

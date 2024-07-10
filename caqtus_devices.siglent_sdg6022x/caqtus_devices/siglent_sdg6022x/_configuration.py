@@ -4,6 +4,8 @@ from typing import Literal, Self
 
 import attrs
 from caqtus.device import DeviceConfiguration
+from caqtus.device.output_transform import EvaluableOutput
+from caqtus.device.output_transform.transformation import evaluable_output_validator
 from caqtus.types.expression import Expression
 from caqtus.utils import serialization
 
@@ -25,13 +27,9 @@ class SineWaveOutput:
         validator=attrs.validators.in_([50.0, "High Z"]),
         on_setattr=attrs.setters.validate,
     )
-    frequency: Expression = attrs.field(
-        validator=attrs.validators.instance_of(Expression)
-    )
-    amplitude: Expression = attrs.field(
-        validator=attrs.validators.instance_of(Expression)
-    )
-    offset: Expression = attrs.field(validator=attrs.validators.instance_of(Expression))
+    frequency: EvaluableOutput = attrs.field(validator=evaluable_output_validator)
+    amplitude: EvaluableOutput = attrs.field(validator=evaluable_output_validator)
+    offset: EvaluableOutput = attrs.field(validator=evaluable_output_validator)
 
     @classmethod
     def default(cls) -> SineWaveOutput:
