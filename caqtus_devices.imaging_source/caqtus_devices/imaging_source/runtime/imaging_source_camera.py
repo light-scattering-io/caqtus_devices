@@ -7,23 +7,22 @@ section SDK, install the IC Imaging Control C Library if you are using Windows.
 Untested on other platforms.
 """
 
+import contextlib
 import ctypes
 import logging
 import os
-from typing import Literal, ClassVar, Optional
+from typing import Literal, ClassVar, Self
 
 import attrs
-import caqtus.formatter as fmt
 import numpy
-from caqtus.device import RuntimeDevice
+
+import caqtus.formatter as fmt
 from caqtus.device.camera import Camera, CameraTimeoutError
-from caqtus.types.image import Image
 from caqtus.types.recoverable_exceptions import (
     ConnectionFailedError,
     RecoverableException,
 )
 from caqtus.utils.contextlib import close_on_error
-
 from . import tisgrabber as tis
 
 logger = logging.getLogger(__name__)
@@ -44,7 +43,7 @@ _MAP_FORMAT = {"Y16": 4, "Y800": 0}
 
 
 @attrs.define(slots=False)
-class ImagingSourceCameraDMK33GR0134(Camera, RuntimeDevice):
+class ImagingSourceCameraDMK33GR0134(Camera):
     """Class to use an Imaging Source camera DMK33GR0134.
 
     Warning:
@@ -69,7 +68,7 @@ class ImagingSourceCameraDMK33GR0134(Camera, RuntimeDevice):
     )
 
     _grabber_handle: ctypes.POINTER(tis.HGRABBER) = attrs.field(init=False)
-    _current_exposure: Optional[float] = attrs.field(init=False, default=None)
+    _close_stack = attrs.field(init=False, factory=contextlib.ExitStack)
 
     @classmethod
     def get_device_names(cls) -> list[str]:
@@ -86,24 +85,30 @@ class ImagingSourceCameraDMK33GR0134(Camera, RuntimeDevice):
 
         return ic.IC_GetDeviceCount()
 
-    def initialize(self):
-        super().initialize()
+    def __enter__(self) -> Self:
         with close_on_error(self._close_stack):
-            self._grabber_handle = ic.IC_CreateGrabber()
-            self._close_stack.callback(ic.IC_ReleaseGrabber, self._grabber_handle)
+            self._initialize()
+        return self
 
-            ic.IC_OpenDevByUniqueName(self._grabber_handle, tis.T(self.camera_name))
-            if not ic.IC_IsDevValid(self._grabber_handle):
-                raise ConnectionFailedError(
-                    f"Could not find camera with "
-                    f"{fmt.device_param('camera name', self.camera_name)}"
-                )
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return self._close_stack.__exit__(exc_type, exc_val, exc_tb)
 
-            self._set_format(self.format)
-            self._set_trigger(self.external_trigger)
+    def _initialize(self):
+        self._grabber_handle = ic.IC_CreateGrabber()
+        self._close_stack.callback(ic.IC_ReleaseGrabber, self._grabber_handle)
 
-            self._start_live()
-            self._add_closing_callback(self._stop_live)
+        ic.IC_OpenDevByUniqueName(self._grabber_handle, tis.T(self.camera_name))
+        if not ic.IC_IsDevValid(self._grabber_handle):
+            raise ConnectionFailedError(
+                f"Could not find camera with "
+                f"{fmt.device_param('camera name', self.camera_name)}"
+            )
+
+        self._set_format(self.format)
+        self._set_trigger(self.external_trigger)
+
+        self._start_live()
+        self._close_stack.callback(self._stop_live)
 
     def _start_live(self) -> None:
         if not ic.IC_StartLive(self._grabber_handle, 0):
@@ -113,36 +118,34 @@ class ImagingSourceCameraDMK33GR0134(Camera, RuntimeDevice):
 
     def _stop_live(self) -> None:
         if not ic.IC_StopLive(self._grabber_handle):
-            raise RuntimeError(f"Failed to stop live for {self}")
+            raise RuntimeError(f"Failed to stop live")
 
     def update_parameters(self, timeout: float) -> None:
         self.timeout = timeout
 
-    def _start_acquisition(self, exposures: list[float]) -> None:
-        pass
+    @contextlib.contextmanager
+    def acquire(self, exposures: list[float]):
+        yield self._read_images(exposures)
 
-    def _read_image(self, exposure: float) -> Image:
-        if exposure != self._current_exposure:
-            self._set_exposure(exposure)
-            self._current_exposure = exposure
-        self._snap_picture()
-        return self._read_picture_from_camera()
-
-    def _stop_acquisition(self) -> None:
-        pass
+    def _read_images(self, exposures: list[float]):
+        current_exposure = None
+        for exposure in exposures:
+            if exposure != current_exposure:
+                self._set_exposure(exposure)
+                current_exposure = exposure
+            self._snap_picture()
+            yield self._read_picture_from_camera()
 
     def _set_trigger(self, external_trigger: bool):
         if (
             ic.IC_EnableTrigger(self._grabber_handle, int(external_trigger))
             != tis.IC_SUCCESS
         ):
-            raise RuntimeError(
-                f"Failed to set trigger mode to {external_trigger} for {self}"
-            )
+            raise RuntimeError(f"Failed to set trigger mode to {external_trigger}")
 
     def _set_format(self, format_: Literal["Y16", "Y800"]):
         if not ic.IC_SetFormat(self._grabber_handle, _MAP_FORMAT[format_]):
-            raise RuntimeError(f"Failed to set format for {self}")
+            raise RuntimeError(f"Failed to set format")
 
     def _set_exposure(self, exposure: float):
         ic.IC_SetPropertyAbsoluteValue(
@@ -156,7 +159,7 @@ class ImagingSourceCameraDMK33GR0134(Camera, RuntimeDevice):
         timeout = int(self.timeout * 1e3)
         result = ic.IC_SnapImage(self._grabber_handle, timeout)
         if result != tis.IC_SUCCESS:
-            raise CameraTimeoutError(f"Failed to acquire picture for {self}")
+            raise CameraTimeoutError(f"Failed to acquire picture")
 
     def _read_picture_from_camera(self) -> numpy.ndarray:
         width = ctypes.c_long()

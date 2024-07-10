@@ -1,24 +1,26 @@
+import contextlib
 import logging
 import time
-from typing import Any, ClassVar, Optional, TYPE_CHECKING
+from typing import Any, ClassVar, Optional, Self
 
 from attrs import define, field
 from attrs.setters import frozen
 from attrs.validators import instance_of
-from caqtus.device import RuntimeDevice
 from caqtus.device.camera import Camera, CameraTimeoutError
 from caqtus.types.image import Image
+from caqtus.types.recoverable_exceptions import ConnectionFailedError
 from caqtus.utils import log_exception
+from caqtus.utils.contextlib import close_on_error
+
+from . import dcam, dcamapi4
 
 logger = logging.getLogger(__name__)
-logger.setLevel("DEBUG")
 
-if TYPE_CHECKING:
-    import dcam
+BUFFER_SIZE = 10
 
 
 @define(slots=False)
-class OrcaQuestCamera(Camera, RuntimeDevice):
+class OrcaQuestCamera(Camera):
     """
 
     Beware that not all roi values are allowed for this camera.
@@ -35,117 +37,134 @@ class OrcaQuestCamera(Camera, RuntimeDevice):
 
     _camera: "dcam.Dcam" = field(init=False)
     _buffer_number_pictures: Optional[int] = field(init=False, default=None)
+    _exit_stack = field(init=False, factory=contextlib.ExitStack)
 
     def _read_last_error(self) -> str:
-        return self.dcam.DCAMERR(self._camera.lasterr()).name
+        return dcam.DCAMERR(self._camera.lasterr()).name
 
     def update_parameters(self, timeout: float) -> None:
         self.timeout = timeout
 
-    @log_exception(logger)
-    def initialize(self) -> None:
-        # We only do the import when initializing the camera because it requires a
-        # specific library that is not always available.
-        from . import dcam
-        from . import dcamapi4
+    def __enter__(self) -> Self:
+        with close_on_error(self._exit_stack):
+            self._initialize()
+        return self
 
-        self.dcam = dcam
-        self.dcamapi4 = dcamapi4
-        super().initialize()
-        if self.dcam.Dcamapi.init():
-            self._add_closing_callback(self.dcam.Dcamapi.uninit)
+    def __exit__(self, exc_type, exc_value, traceback):
+        return self._exit_stack.__exit__(exc_type, exc_value, traceback)
+
+    @log_exception(logger)
+    def _initialize(self) -> None:
+        if dcam.Dcamapi.init():
+            self._exit_stack.callback(dcam.Dcamapi.uninit)
         else:
             # If this error occurs, check that the dcam-api from hamamatsu is installed
             # https://dcam-api.com/
             raise ImportError(
-                f"Failed to initialize DCAM-API: {self.dcam.Dcamapi.lasterr().name}"
+                f"Failed to initialize DCAM-API: {dcam.Dcamapi.lasterr().name}"
             )
 
-        if self.camera_number < self.dcam.Dcamapi.get_devicecount():
-            self._camera = self.dcam.Dcam(self.camera_number)
+        if self.camera_number < dcam.Dcamapi.get_devicecount():
+            self._camera = dcam.Dcam(self.camera_number)
         else:
-            raise RuntimeError(f"Could not find camera {str(self.camera_number)}")
+            raise ConnectionFailedError(
+                f"Could not find camera {str(self.camera_number)}"
+            )
 
         if not self._camera.dev_open():
-            raise RuntimeError(
-                f"Failed to open camera {self.name}: {self._read_last_error()}"
+            raise ConnectionFailedError(
+                f"Failed to open camera {self.camera_number}: {self._read_last_error()}"
             )
-        self._add_closing_callback(self._camera.dev_close)
-        logger.info(f"{self.name}: successfully opened camera {self.camera_number}")
+        self._exit_stack.callback(self._camera.dev_close)
 
         if not self._camera.prop_setvalue(
-            self.dcamapi4.DCAM_IDPROP.SUBARRAYMODE, self.dcamapi4.DCAMPROP.MODE.OFF
+            dcamapi4.DCAM_IDPROP.SUBARRAYMODE, dcamapi4.DCAMPROP.MODE.OFF
         ):
             raise RuntimeError(
                 f"can't set subarray mode off: {self._read_last_error()}"
             )
 
         properties = {
-            self.dcamapi4.DCAM_IDPROP.SUBARRAYHPOS: self.roi.x,
-            self.dcamapi4.DCAM_IDPROP.SUBARRAYHSIZE: self.roi.width,
-            self.dcamapi4.DCAM_IDPROP.SUBARRAYVPOS: self.roi.y,
-            self.dcamapi4.DCAM_IDPROP.SUBARRAYVSIZE: self.roi.height,
-            self.dcamapi4.DCAM_IDPROP.SENSORMODE: self.dcamapi4.DCAMPROP.SENSORMODE.AREA,
-            self.dcamapi4.DCAM_IDPROP.TRIGGER_GLOBALEXPOSURE: self.dcamapi4.DCAMPROP.TRIGGER_GLOBALEXPOSURE.DELAYED,
+            dcamapi4.DCAM_IDPROP.SUBARRAYHPOS: self.roi.x,
+            dcamapi4.DCAM_IDPROP.SUBARRAYHSIZE: self.roi.width,
+            dcamapi4.DCAM_IDPROP.SUBARRAYVPOS: self.roi.y,
+            dcamapi4.DCAM_IDPROP.SUBARRAYVSIZE: self.roi.height,
+            dcamapi4.DCAM_IDPROP.SENSORMODE: dcamapi4.DCAMPROP.SENSORMODE.AREA,
+            dcamapi4.DCAM_IDPROP.TRIGGER_GLOBALEXPOSURE: dcamapi4.DCAMPROP.TRIGGER_GLOBALEXPOSURE.DELAYED,
         }
 
         if self.external_trigger:
             # The Camera is set to acquire images when the trigger is high.
             # This allows changing the exposure by changing the trigger duration and
             # without having to communicate with the camera.
-            # With this it is possible to change the exposure of two very close pictures.
+            # With this it is possible to change the exposure of two very close
+            # pictures.
             # However, the trigger received by the camera must be clean.
             # If it bounces, the acquisition will be messed up.
-            # To prevent bouncing, it might be necessary to add a 50 Ohm resistor before the camera trigger input.
-            properties[self.dcamapi4.DCAM_IDPROP.TRIGGERSOURCE] = (
-                self.dcamapi4.DCAMPROP.TRIGGERSOURCE.EXTERNAL
-            )
-            properties[self.dcamapi4.DCAM_IDPROP.TRIGGERACTIVE] = (
-                self.dcamapi4.DCAMPROP.TRIGGERACTIVE.LEVEL
-            )
-            properties[self.dcamapi4.DCAM_IDPROP.TRIGGERPOLARITY] = (
-                self.dcamapi4.DCAMPROP.TRIGGERPOLARITY.POSITIVE
-            )
+            # To prevent bouncing, it might be necessary to add a 50 Ohm resistor
+            # before the camera trigger input.
+            properties[
+                dcamapi4.DCAM_IDPROP.TRIGGERSOURCE
+            ] = dcamapi4.DCAMPROP.TRIGGERSOURCE.EXTERNAL
+            properties[
+                dcamapi4.DCAM_IDPROP.TRIGGERACTIVE
+            ] = dcamapi4.DCAMPROP.TRIGGERACTIVE.LEVEL
+            properties[
+                dcamapi4.DCAM_IDPROP.TRIGGERPOLARITY
+            ] = dcamapi4.DCAMPROP.TRIGGERPOLARITY.POSITIVE
         else:
             raise NotImplementedError("Only external trigger is supported")
-            # Need to handle different exposures when using internal trigger, so it is not implemented yet.
+            # Need to handle different exposures when using internal trigger, so it is
+            # not implemented yet.
             # properties[DCAM_IDPROP.TRIGGERSOURCE] = DCAMPROP.TRIGGERSOURCE.INTERNAL
 
         for property_id, property_value in properties.items():
             if not self._camera.prop_setvalue(property_id, property_value):
                 raise RuntimeError(
-                    f"Failed to set property {str(property_id)} to"
-                    f" {str(property_value)} for {self.name}:"
+                    f"Failed to set property {property_id} to {property_value}:"
                     f" {self._read_last_error()}"
                 )
 
         if not self._camera.prop_setvalue(
-            self.dcamapi4.DCAM_IDPROP.SUBARRAYMODE, self.dcamapi4.DCAMPROP.MODE.ON
+            dcamapi4.DCAM_IDPROP.SUBARRAYMODE, dcamapi4.DCAMPROP.MODE.ON
         ):
             raise RuntimeError(f"can't set subarray mode on: {self._read_last_error()}")
 
-        if not self._camera.buf_alloc(10):
+        if not self._camera.buf_alloc(BUFFER_SIZE):
             raise RuntimeError(
                 f"Failed to allocate buffer for images: {self._read_last_error()}"
             )
-        self._add_closing_callback(self._camera.buf_release)
+        self._exit_stack.callback(self._camera.buf_release)
 
-    def _start_acquisition(self, exposures: list[float]) -> None:
-        if not self._camera.cap_start(bSequence=True):
-            raise RuntimeError(
-                f"Can't start acquisition for {self}: {self._read_last_error()}"
+    @contextlib.contextmanager
+    def acquire(self, exposures: list[float]):
+        if len(exposures) > BUFFER_SIZE:
+            raise ValueError(
+                f"Can't acquire {len(exposures)} images, the maximum number of images"
+                f" that can be acquired is {BUFFER_SIZE}"
             )
+        self._start_acquisition()
+        try:
+            yield self._read_images(exposures)
+        finally:
+            self._stop_acquisition()
 
-    def _read_image(self, exposure: float) -> Image:
-        # Should change the exposure time if not in gated mode
-        # self._camera.prop_setvalue(DCAM_IDPROP.EXPOSURETIME, new_exposure)
-        return self._acquire_picture(self.timeout)
+    def _start_acquisition(self) -> None:
+        if not self._camera.cap_start(bSequence=True):
+            raise RuntimeError(f"Can't start acquisition: {self._read_last_error()}")
 
     def _stop_acquisition(self) -> None:
         if not self._camera.cap_stop():
-            raise RuntimeError(
-                f"Failed to stop acquisition for {self}: {self._read_last_error()}"
-            )
+            raise RuntimeError(f"Failed to stop acquisition: {self._read_last_error()}")
+
+    def _read_images(self, exposures: list[float]):
+        # Should change the exposure time if using internal trigger, but don't need to
+        # do it know as we only support external trigger.
+        # self._camera.prop_setvalue(DCAM_IDPROP.EXPOSURETIME, new_exposure)
+
+        for frame, _ in enumerate(exposures):
+            image = self._acquire_picture(frame)
+            yield image
 
     def list_properties(self) -> list:
         result = []
@@ -157,30 +176,28 @@ class OrcaQuestCamera(Camera, RuntimeDevice):
             property_id = self._camera.prop_getnextid(property_id)
         return result
 
-    def _acquire_picture(self, timeout: float) -> Image:
-        start_acquire = time.time()
+    def _acquire_picture(self, frame: int) -> Image:
+        start_acquire = time.monotonic()
         while True:
             if self._camera.wait_capevent_frameready(1):
-                data = self._camera.buf_getlastframedata()
-                return data.T
+                image = self._camera.buf_getframedata(frame)
+                return image.T
             error = self._camera.lasterr()
             if error.is_timeout():
-                if time.time() - start_acquire > self.timeout:
+                elapsed = time.monotonic() - start_acquire
+                if elapsed < self.timeout:
+                    continue
+                else:
                     raise CameraTimeoutError(
-                        f"{self.name} timed out after {timeout*1e3:.0f} ms without"
-                        f" receiving a trigger"
+                        f"Timed out after {self.timeout*1e3:.0f} ms without receiving "
+                        f"a trigger"
                     )
-                continue
+
             else:
-                raise RuntimeError(
-                    f"An error occurred during acquisition for {self}: {error}"
-                )
+                raise RuntimeError(f"An error occurred during acquisition: {error}")
 
     @classmethod
     def list_camera_infos(cls) -> list[dict[str, Any]]:
-        import dcam
-        import dcamapi4
-
         result = []
         for camera_index in range(dcam.Dcamapi.get_devicecount()):
             infos = {}

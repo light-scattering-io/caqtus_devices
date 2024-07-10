@@ -22,7 +22,6 @@ class ImagingSourceCameraCompiler(CameraCompiler):
     def compile_initialization_parameters(self) -> Mapping[DeviceParameter, Any]:
         return {
             **super().compile_initialization_parameters(),
-            DeviceParameter("name"): self.device_name,
             DeviceParameter("camera_name"): self.configuration.camera_name,
             DeviceParameter("format"): self.configuration.format,
         }
