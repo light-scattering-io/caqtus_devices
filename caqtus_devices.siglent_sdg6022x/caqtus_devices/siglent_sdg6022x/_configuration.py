@@ -4,7 +4,7 @@ from typing import Literal, Self
 
 import attrs
 from caqtus.device import DeviceConfiguration
-from caqtus.device.output_transform import EvaluableOutput
+from caqtus.device.output_transform import EvaluableOutput, converter
 from caqtus.device.output_transform.transformation import evaluable_output_validator
 from caqtus.types.expression import Expression
 from caqtus.utils import serialization
@@ -67,20 +67,20 @@ class SiglentSDG6022XConfiguration(DeviceConfiguration[SiglentSDG6022X]):
 
     @classmethod
     def load(cls, data: serialization.JSON) -> Self:
-        return converter.structure(data, cls)
+        return _converter.structure(data, cls)
 
     def dump(self) -> serialization.JSON:
-        return converter.unstructure(self)
+        return _converter.unstructure(self)
 
 
-converter = serialization.copy_converter()
+_converter = converter.copy()
 
 
 def unstructure_channel_configuration(obj: ChannelConfiguration) -> serialization.JSON:
     if obj == "ignore":
         return "ignore"
     if isinstance(obj, SineWaveOutput):
-        return converter.unstructure(obj) | {"_type": "SineWaveOutput"}
+        return _converter.unstructure(obj) | {"_type": "SineWaveOutput"}
     raise ValueError(f"Unknown channel configuration: {obj!r}")
 
 
@@ -91,11 +91,11 @@ def structure_channel_configuration(
         return "ignore"
     if isinstance(serialized, dict):
         if serialized.pop("_type") == "SineWaveOutput":
-            return converter.structure(serialized, SineWaveOutput)
+            return _converter.structure(serialized, SineWaveOutput)
     raise ValueError(f"Unknown channel configuration: {serialized!r}")
 
 
-converter.register_structure_hook(ChannelConfiguration, structure_channel_configuration)
-converter.register_unstructure_hook(
+_converter.register_structure_hook(ChannelConfiguration, structure_channel_configuration)
+_converter.register_unstructure_hook(
     ChannelConfiguration, unstructure_channel_configuration
 )
