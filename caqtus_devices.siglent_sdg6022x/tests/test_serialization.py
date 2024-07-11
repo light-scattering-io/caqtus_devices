@@ -1,8 +1,11 @@
+from caqtus.device.output_transform import EvaluableOutput
+from caqtus.types.expression import Expression
+
 from caqtus_devices.siglent_sdg6022x import SiglentSDG6022XConfiguration
 from caqtus_devices.siglent_sdg6022x._configuration import (
-    converter,
     ChannelConfiguration,
     SineWaveOutput,
+    _converter,
 )
 
 
@@ -30,10 +33,20 @@ def test_1():
         "output_enabled": True,
     }
 
-    assert converter.structure(data, ChannelConfiguration) == SineWaveOutput.default()
+    assert _converter.structure(data, ChannelConfiguration) == SineWaveOutput.default()
 
 
 def test_2():
     data = "ignore"
 
-    assert converter.structure(data, ChannelConfiguration) == "ignore"
+    assert _converter.structure(data, ChannelConfiguration) == "ignore"
+
+
+def test_3():
+    expr = Expression("1 kHz")
+
+    unstructured = _converter.unstructure(expr, EvaluableOutput)
+
+    structured = _converter.structure(unstructured, EvaluableOutput)
+
+    assert structured == expr

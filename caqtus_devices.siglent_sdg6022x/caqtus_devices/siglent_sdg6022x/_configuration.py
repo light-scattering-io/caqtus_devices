@@ -1,10 +1,14 @@
 from __future__ import annotations
 
-from typing import Literal, Self
+from typing import Literal, Self, Optional
 
 import attrs
 from caqtus.device import DeviceConfiguration
-from caqtus.device.output_transform import EvaluableOutput, converter
+from caqtus.device.output_transform import (
+    EvaluableOutput,
+    converter,
+    structure_evaluable_output,
+)
 from caqtus.device.output_transform.transformation import evaluable_output_validator
 from caqtus.types.expression import Expression
 from caqtus.utils import serialization
@@ -42,7 +46,7 @@ class SineWaveOutput:
         )
 
 
-ChannelConfiguration = Literal["ignore"] | SineWaveOutput
+ChannelConfiguration = SineWaveOutput | Literal["ignore"]
 
 
 @attrs.define
@@ -67,13 +71,24 @@ class SiglentSDG6022XConfiguration(DeviceConfiguration[SiglentSDG6022X]):
 
     @classmethod
     def load(cls, data: serialization.JSON) -> Self:
-        return _converter.structure(data, cls)
+        return structure_siglent_configuration(data, cls)
 
     def dump(self) -> serialization.JSON:
         return _converter.unstructure(self)
 
 
-_converter = converter.copy()
+def structure_siglent_configuration(data, _):
+    return SiglentSDG6022XConfiguration(
+        remote_server=_converter.structure(data["remote_server"], Optional[str]),
+        resource_name=_converter.structure(data["resource_name"], str),
+        channels=(
+            structure_channel_configuration(data["channels"][0], ChannelConfiguration),
+            structure_channel_configuration(data["channels"][1], ChannelConfiguration),
+        ),
+    )
+
+
+_converter = converter
 
 
 def unstructure_channel_configuration(obj: ChannelConfiguration) -> serialization.JSON:
@@ -91,13 +106,34 @@ def structure_channel_configuration(
         return "ignore"
     if isinstance(serialized, dict):
         if serialized.pop("_type") == "SineWaveOutput":
-            return _converter.structure(serialized, SineWaveOutput)
+            return structure_sine_wave_output(serialized, SineWaveOutput)
     raise ValueError(f"Unknown channel configuration: {serialized!r}")
 
 
-_converter.register_structure_hook(
-    ChannelConfiguration, structure_channel_configuration
-)
-_converter.register_unstructure_hook(
-    ChannelConfiguration, unstructure_channel_configuration
-)
+def structure_sine_wave_output(data: serialization.JSON, _):
+    return SineWaveOutput(
+        output_enabled=_converter.structure(data["output_enabled"], bool),
+        load=_converter.structure(data["load"], float),
+        frequency=structure_evaluable_output(data["frequency"], EvaluableOutput),
+        amplitude=structure_evaluable_output(data["amplitude"], EvaluableOutput),
+        offset=structure_evaluable_output(data["offset"], EvaluableOutput),
+    )
+
+
+# # Workaround for https://github.com/python-attrs/cattrs/issues/430
+# structure_hook = cattrs.gen.make_dict_structure_fn(
+#     SineWaveOutput,
+#     _converter,
+#     frequency=cattrs.override(struct_hook=structure_evaluable_output),
+#     amplitude=cattrs.override(struct_hook=structure_evaluable_output),
+#     offset=cattrs.override(struct_hook=structure_evaluable_output),
+# )
+
+# _converter.register_structure_hook(SineWaveOutput, structure_sine_wave_output)
+#
+# _converter.register_structure_hook(
+#     ChannelConfiguration, structure_channel_configuration
+# )
+# _converter.register_unstructure_hook(
+#     ChannelConfiguration, unstructure_channel_configuration
+# )
