@@ -113,7 +113,7 @@ def structure_channel_configuration(
 def structure_sine_wave_output(data: serialization.JSON, _):
     return SineWaveOutput(
         output_enabled=_converter.structure(data["output_enabled"], bool),
-        load=_converter.structure(data["load"], float),
+        load=_converter.structure(data["load"], float | Literal["High Z"]),
         frequency=structure_evaluable_output(data["frequency"], EvaluableOutput),
         amplitude=structure_evaluable_output(data["amplitude"], EvaluableOutput),
         offset=structure_evaluable_output(data["offset"], EvaluableOutput),
