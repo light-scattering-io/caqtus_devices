@@ -1,18 +1,21 @@
 from typing import Optional
 
 from PySide6.QtWidgets import QLineEdit, QWidget
-from caqtus.gui.condetrol.device_configuration_editors import (
+
+from caqtus.gui.condetrol.device_configuration_editors.sequencer_configuration_editor import (
     SequencerConfigurationEditor,
 )
-
 from ..configuration import SwabianPulseStreamerConfiguration
 
 
 class SwabianPulseStreamerDeviceConfigEditor(
     SequencerConfigurationEditor[SwabianPulseStreamerConfiguration]
 ):
-    def __init__(self, config: SwabianPulseStreamerConfiguration,
-                 parent: Optional[QWidget] = None):
+    def __init__(
+        self,
+        config: SwabianPulseStreamerConfiguration,
+        parent: Optional[QWidget] = None,
+    ):
         super().__init__(config, parent)
 
         self.time_step_spinbox.setRange(1, 1)
