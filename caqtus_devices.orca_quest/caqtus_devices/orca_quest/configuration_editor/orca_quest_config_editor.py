@@ -1,9 +1,10 @@
-from PySide6.QtWidgets import QSpinBox
+from typing import Optional
 
-from caqtus.gui.condetrol.device_configuration_editors.camera_configuration_editor.editor import (
+from PySide6.QtWidgets import QSpinBox, QWidget
+
+from caqtus.gui.condetrol.device_configuration_editors.camera_configuration_editor import (
     CameraConfigurationEditor,
 )
-from caqtus.utils.roi import RectangularROI, Width, Height
 from ..configuration import OrcaQuestCameraConfiguration
 
 
@@ -12,25 +13,17 @@ class OrcaQuestConfigurationEditor(
 ):
     def __init__(
         self,
-        *args,
-        **kwargs,
+        device_config: OrcaQuestCameraConfiguration,
+        parent: Optional[QWidget] = None,
     ):
-        super().__init__(*args, **kwargs)
+        super().__init__(device_config, parent)
 
         self._camera_number_spinbox = QSpinBox()
-        self._camera_number_spinbox.setRange(0, 100)
-        self.form.insertRow(0, "Camera number", self._camera_number_spinbox)
-        self.update_ui_from_config(self.device_config)
+        self._camera_number_spinbox.setRange(0, 99)
+        self._camera_number_spinbox.setValue(device_config.camera_number)
+        self.insert_row("Camera number", self._camera_number_spinbox, 1)
 
-    def update_config_from_ui(
-        self, device_config: OrcaQuestCameraConfiguration
-    ) -> OrcaQuestCameraConfiguration:
-        device_config = super().update_config_from_ui(device_config)
+    def get_configuration(self) -> OrcaQuestCameraConfiguration:
+        device_config = super().get_configuration()
         device_config.camera_number = self._camera_number_spinbox.value()
         return device_config
-
-    def update_ui_from_config(
-        self, device_config: OrcaQuestCameraConfiguration
-    ) -> None:
-        super().update_ui_from_config(device_config)
-        self._camera_number_spinbox.setValue(device_config.camera_number)
