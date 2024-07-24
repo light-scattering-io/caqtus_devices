@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Literal, Self, Optional
 
 import attrs
+import cattrs.strategies
 from caqtus.device import DeviceConfiguration
 from caqtus.device.output_transform import (
     EvaluableOutput,
@@ -14,6 +15,32 @@ from caqtus.types.expression import Expression
 from caqtus.utils import serialization
 
 from ._runtime import SiglentSDG6022X
+
+
+@attrs.define
+class FSKModulation:
+    """Configuration for FSK modulation.
+
+    In FSK modulation mode, the frequency hops between the base wave frequency and the
+    hop frequency.
+    """
+
+    hop_frequency: Expression = attrs.field(
+        validator=attrs.validators.instance_of(Expression)
+    )
+
+
+@attrs.define
+class AmplitudeModulation:
+    """Not implemented."""
+
+
+Modulation = FSKModulation | AmplitudeModulation
+
+
+def validate_modulation(instance, attribute, value):
+    if not isinstance(value, (FSKModulation, AmplitudeModulation)):
+        raise TypeError(f"Invalid modulation type: {value!r}")
 
 
 @attrs.define
@@ -34,6 +61,9 @@ class SineWaveOutput:
     frequency: EvaluableOutput = attrs.field(validator=evaluable_output_validator)
     amplitude: EvaluableOutput = attrs.field(validator=evaluable_output_validator)
     offset: EvaluableOutput = attrs.field(validator=evaluable_output_validator)
+    modulation: Optional[Modulation] = attrs.field(
+        default=None, validator=attrs.validators.optional(validate_modulation)
+    )
 
     @classmethod
     def default(cls) -> SineWaveOutput:
@@ -95,8 +125,28 @@ def unstructure_channel_configuration(obj: ChannelConfiguration) -> serializatio
     if obj == "ignore":
         return "ignore"
     if isinstance(obj, SineWaveOutput):
-        return _converter.unstructure(obj) | {"_type": "SineWaveOutput"}
+        return _converter.unstructure(obj, SineWaveOutput) | {"_type": "SineWaveOutput"}
     raise ValueError(f"Unknown channel configuration: {obj!r}")
+
+
+def unstructure_modulation(obj: Optional[Modulation]) -> serialization.JSON:
+    if obj is None:
+        return None
+    else:
+        return _converter.unstructure(obj, Modulation)
+
+
+_converter.register_unstructure_hook(Optional[Modulation], unstructure_modulation)
+
+
+def structure_modulation(data: serialization.JSON, _) -> Optional[Modulation]:
+    if data is None:
+        return None
+    else:
+        return _converter.structure(data, Modulation)
+
+
+_converter.register_structure_hook(Optional[Modulation], structure_modulation)
 
 
 def structure_channel_configuration(
@@ -111,29 +161,22 @@ def structure_channel_configuration(
 
 
 def structure_sine_wave_output(data: serialization.JSON, _):
+    if not isinstance(data, dict):
+        raise ValueError(f"Expected dict, got {type(data)}")
     return SineWaveOutput(
         output_enabled=_converter.structure(data["output_enabled"], bool),
         load=_converter.structure(data["load"], float | Literal["High Z"]),
         frequency=structure_evaluable_output(data["frequency"], EvaluableOutput),
         amplitude=structure_evaluable_output(data["amplitude"], EvaluableOutput),
         offset=structure_evaluable_output(data["offset"], EvaluableOutput),
+        modulation=_converter.structure(data.get("modulation"), Optional[Modulation]),
     )
 
 
-# # Workaround for https://github.com/python-attrs/cattrs/issues/430
-# structure_hook = cattrs.gen.make_dict_structure_fn(
-#     SineWaveOutput,
-#     _converter,
-#     frequency=cattrs.override(struct_hook=structure_evaluable_output),
-#     amplitude=cattrs.override(struct_hook=structure_evaluable_output),
-#     offset=cattrs.override(struct_hook=structure_evaluable_output),
-# )
+cattrs.strategies.configure_tagged_union(
+    Modulation, _converter, tag_name="modulation_type"
+)
 
-# _converter.register_structure_hook(SineWaveOutput, structure_sine_wave_output)
-#
-# _converter.register_structure_hook(
-#     ChannelConfiguration, structure_channel_configuration
-# )
 _converter.register_unstructure_hook(
     ChannelConfiguration, unstructure_channel_configuration
 )

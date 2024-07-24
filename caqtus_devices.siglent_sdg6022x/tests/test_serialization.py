@@ -1,3 +1,5 @@
+from typing import Optional
+
 from caqtus.device.output_transform import EvaluableOutput
 from caqtus.types.expression import Expression
 
@@ -7,6 +9,8 @@ from caqtus_devices.siglent_sdg6022x._configuration import (
     SineWaveOutput,
     _converter,
     structure_channel_configuration,
+    FSKModulation,
+    Modulation,
 )
 
 
@@ -54,3 +58,36 @@ def test_3():
     structured = _converter.structure(unstructured, EvaluableOutput)
 
     assert structured == expr
+
+
+def test_4():
+    modulation = FSKModulation(hop_frequency=Expression("80 MHz"))
+
+    unstructured = _converter.unstructure(modulation, Optional[Modulation])
+    assert unstructured["modulation_type"] == "FSKModulation"
+    structured = _converter.structure(unstructured, Optional[Modulation])
+
+    assert structured == modulation
+
+
+def test_6():
+    sine_config = SineWaveOutput.default()
+    sine_config.modulation = FSKModulation(hop_frequency=Expression("80 MHz"))
+
+    unstructured = _converter.unstructure(sine_config, SineWaveOutput)
+
+    structured = _converter.structure(unstructured, SineWaveOutput)
+
+    assert structured == sine_config
+
+
+def test_5():
+    config = SiglentSDG6022XConfiguration.default()
+
+    config.channels = (SineWaveOutput.default(), "ignore")
+    config.channels[0].modulation = FSKModulation(hop_frequency=Expression("80 MHz"))
+
+    unstructured = config.dump()
+    structured = SiglentSDG6022XConfiguration.load(unstructured)
+
+    assert structured == config
