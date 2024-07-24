@@ -1,7 +1,7 @@
 import abc
 import contextlib
 import logging
-from typing import Self, Literal
+from typing import Self, Literal, Optional
 
 import attrs
 import caqtus.formatter as fmt
@@ -39,6 +39,11 @@ class ChannelState(abc.ABC):
 
 
 @attrs.frozen
+class FSKModulation:
+    hop_frequency: float = attrs.field(converter=float)
+
+
+@attrs.frozen
 class SinWave(ChannelState):
     """
     Attributes:
@@ -50,6 +55,7 @@ class SinWave(ChannelState):
     frequency: float = attrs.field(converter=float)
     amplitude: float = attrs.field(converter=float)
     offset: float = attrs.field(converter=float)
+    modulation: Optional[FSKModulation]
 
     def apply(self, instr: pyvisa.resources.Resource) -> None:
         for command in self.commands():
@@ -58,12 +64,25 @@ class SinWave(ChannelState):
         super().apply(instr)
 
     def commands(self) -> list[str]:
-        return [
+        base_wave_commands = [
             f"{self.prefix()}BSWV WVTP,SINE",
             f"{self.prefix()}BSWV FRQ,{self.frequency}",
             f"{self.prefix()}BSWV AMP,{self.amplitude}",
             f"{self.prefix()}BSWV OFST,{self.offset}",
         ]
+
+        if self.modulation is None:
+            return base_wave_commands + [f"{self.prefix()}ModulateWave STATE,OFF"]
+
+        if isinstance(self.modulation, FSKModulation):
+            modulation_commands = [
+                f"{self.prefix()}ModulateWave FSK",
+                f"{self.prefix()}ModulateWave STATE,ON",
+                f"{self.prefix()}ModulateWave HFREQ,{self.modulation.hop_frequency}",
+            ]
+            return base_wave_commands + modulation_commands
+
+        raise NotImplementedError
 
 
 def _channel_validator(instance, attribute, value):
