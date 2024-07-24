@@ -17,8 +17,10 @@ from ._configuration import (
     SiglentSDG6022XConfiguration,
     ChannelConfiguration,
     SineWaveOutput,
+    FSKModulation,
 )
 from ._runtime import ChannelState, SiglentState, SinWave
+from ._runtime import FSKModulation as FSKModulationRuntime
 
 
 class SiglentSDG6022XCompiler(DeviceCompiler):
@@ -103,6 +105,27 @@ def compile_sinewave_output(
             f"{fmt.expression(sine_wave_output.offset)}"
         ) from e
 
+    if sine_wave_output.modulation is None:
+        modulation = None
+    elif isinstance(sine_wave_output.modulation, FSKModulation):
+        hop_frequency = evaluate(
+            sine_wave_output.modulation.hop_frequency, shot_context.get_variables()
+        )
+        if not isinstance(hop_frequency, Quantity):
+            raise InvalidTypeError(
+                f"Expected hop_frequency to be a Quantity, got {type(hop_frequency)}"
+            )
+        try:
+            hop_frequency_magnitude = magnitude_in_unit(hop_frequency, "Hz")
+        except DimensionalityError as e:
+            raise InvalidTypeError(
+                f"Invalid dimensionality when evaluating "
+                f"{fmt.expression(sine_wave_output.modulation.hop_frequency)}"
+            ) from e
+        modulation = FSKModulationRuntime(hop_frequency=hop_frequency_magnitude)
+    else:
+        raise NotImplementedError
+
     return SinWave(
         frequency=frequency_magnitude,
         amplitude=amplitude_magnitude,
@@ -110,4 +133,5 @@ def compile_sinewave_output(
         output_enabled=sine_wave_output.output_enabled,
         load=sine_wave_output.load,
         channel=channel,
+        modulation=modulation,
     )
