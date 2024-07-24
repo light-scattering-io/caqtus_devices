@@ -6,6 +6,7 @@ from caqtus_devices.siglent_sdg6022x._configuration import (
     ChannelConfiguration,
     SineWaveOutput,
     _converter,
+    structure_channel_configuration,
 )
 
 
@@ -33,7 +34,10 @@ def test_1():
         "output_enabled": True,
     }
 
-    assert _converter.structure(data, ChannelConfiguration) == SineWaveOutput.default()
+    assert (
+        structure_channel_configuration(data, ChannelConfiguration)
+        == SineWaveOutput.default()
+    )
 
 
 def test_2():

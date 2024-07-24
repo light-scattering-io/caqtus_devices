@@ -134,6 +134,6 @@ def structure_sine_wave_output(data: serialization.JSON, _):
 # _converter.register_structure_hook(
 #     ChannelConfiguration, structure_channel_configuration
 # )
-# _converter.register_unstructure_hook(
-#     ChannelConfiguration, unstructure_channel_configuration
-# )
+_converter.register_unstructure_hook(
+    ChannelConfiguration, unstructure_channel_configuration
+)
