@@ -78,7 +78,7 @@ class SinWave(ChannelState):
             modulation_commands = [
                 f"{self.prefix()}ModulateWave FSK",
                 f"{self.prefix()}ModulateWave STATE,ON",
-                f"{self.prefix()}ModulateWave HFREQ,{self.modulation.hop_frequency}",
+                f"{self.prefix()}ModulateWave FSK,HFREQ,{self.modulation.hop_frequency}",
             ]
             return base_wave_commands + modulation_commands
 
