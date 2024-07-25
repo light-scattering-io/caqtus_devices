@@ -8,6 +8,8 @@ from PySide6.QtWidgets import (
     QButtonGroup,
     QRadioButton,
     QGroupBox,
+    QComboBox,
+    QFormLayout,
 )
 from caqtus.gui.condetrol.device_configuration_editors import (
     FormDeviceConfigurationEditor,
@@ -18,6 +20,8 @@ from ._configuration import (
     SiglentSDG6022XConfiguration,
     ChannelConfiguration,
     SineWaveOutput,
+    Modulation,
+    FSKModulation,
 )
 from .sine_editor_ui import Ui_SineEditor
 
@@ -103,8 +107,12 @@ class SineWaveOutputEditor(QWidget, Ui_SineEditor):
         super().__init__(parent)
         self.setupUi(self)
         self.loadComboBox.addItems(["50 Ω", "High Z"])
+        self.modulation_widget = ModulationWidget(self)
+        self.formLayout.addRow("Modulation", self.modulation_widget)
 
     def apply(self, config: SineWaveOutput):
+        """Apply the configuration to the editor."""
+
         self.enabledCheckBox.setChecked(config.output_enabled)
         if config.load == 50.0:
             self.loadComboBox.setCurrentText("50 Ω")
@@ -122,11 +130,59 @@ class SineWaveOutputEditor(QWidget, Ui_SineEditor):
             raise NotImplementedError
         self.offsetLineEdit.setText(str(config.offset))
 
+        self.modulation_widget.apply(config.modulation)
+
     def read_config(self) -> SineWaveOutput:
+        """Read the configuration currently displayed in the editor."""
+
         return SineWaveOutput(
             output_enabled=self.enabledCheckBox.isChecked(),
             load=50.0 if self.loadComboBox.currentText() == "50 Ω" else "High Z",
             frequency=Expression(self.frequencyLineEdit.text()),
             amplitude=Expression(self.amplitudeLineEdit.text()),
             offset=Expression(self.offsetLineEdit.text()),
+            modulation=self.modulation_widget.read_config(),
         )
+
+
+class ModulationWidget(QWidget):
+    def __init__(self, parent: Optional[QWidget] = None):
+        super().__init__(parent)
+        layout = QFormLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(layout)
+
+        self.modulation_type = QComboBox(self)
+        self.modulation_type.addItems(["None", "FSK"])
+        layout.addRow("", self.modulation_type)
+
+        self.fsk_widget = QLineEdit(self)
+        self.fsk_widget.setPlaceholderText("Enter an expression for the hop frequency")
+        layout.addRow("Hop Frequency", self.fsk_widget)
+
+        self.modulation_type.currentIndexChanged.connect(self.update_visibility)
+
+        self.update_visibility(self.modulation_type.currentIndex())
+
+    def update_visibility(self, index: int):
+        layout = self.layout()
+        assert isinstance(layout, QFormLayout)
+        layout.setRowVisible(1, index == 1)
+
+    def apply(self, config: Optional[Modulation]):
+        if config is None:
+            self.modulation_type.setCurrentText("None")
+        elif isinstance(config, FSKModulation):
+            self.modulation_type.setCurrentText("FSK")
+            self.fsk_widget.setText(str(config.hop_frequency))
+        else:
+            raise NotImplementedError
+        self.update_visibility(self.modulation_type.currentIndex())
+
+    def read_config(self) -> Optional[Modulation]:
+        if self.modulation_type.currentText() == "None":
+            return None
+        elif self.modulation_type.currentText() == "FSK":
+            return FSKModulation(hop_frequency=Expression(self.fsk_widget.text()))
+        else:
+            assert False, "No modulation type selected"
