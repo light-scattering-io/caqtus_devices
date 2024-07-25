@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "caqtus-devices-siglent-sdg6022x"
-version = "2.3.1"
+version = "2.3.2"
 description = ""
 authors = ["Dear <lechadoq@gmail.com>"]
 readme = "README.md"
