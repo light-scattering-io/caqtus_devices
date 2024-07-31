@@ -10,7 +10,7 @@ import numpy as np
 import pyvisa
 import pyvisa.constants
 from caqtus.device import Device
-from caqtus.types.recoverable_exceptions import ConnectionFailedError
+from caqtus.types.recoverable_exceptions import ConnectionFailedError, InvalidValueError
 from caqtus.utils.contextlib import close_on_error
 
 logger = logging.getLogger(__name__)
@@ -123,14 +123,26 @@ class SinWave(ChannelState):
         if new_params.wave_type != "SINE":
             raise ValueError(f"Failed to set wave type: {new_params}")
 
+        # It can happen that the device does not accept the new parameters, for example
+        # if they are outside its supported range.
+        # That"s why we check if the parameters were updated correctly.
         if not np.isclose(new_params.frequency, self.frequency):
-            raise ValueError(f"Failed to set frequency: {new_params}")
+            raise InvalidValueError(
+                f"Failed to update channel {self.channel + 1} frequency from "
+                f"{old_params.frequency}Hz  to {self.frequency}Hz"
+            )
 
         if not np.isclose(new_params.amplitude, self.amplitude):
-            raise ValueError(f"Failed to set amplitude: {new_params}")
+            raise InvalidValueError(
+                f"Failed to update channel {self.channel + 1} amplitude from "
+                f"{old_params.amplitude}V to {self.amplitude}V"
+            )
 
         if not np.isclose(new_params.offset, self.offset):
-            raise ValueError(f"Failed to set offset: {new_params}")
+            raise InvalidValueError(
+                f"Failed to update channel {self.channel + 1} offset from "
+                f"{old_params.offset}V to {self.offset}V"
+            )
 
         if self.modulation is None:
             return super().apply(instr)
