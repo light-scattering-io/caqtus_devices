@@ -40,7 +40,7 @@ def wrap_nidaqmx_error(f):
         try:
             return f(*args, **kwargs)
         except nidaqmx.errors.DaqError as e:
-            error = RuntimeError(str(e))
+            error = RuntimeError(str(e)).with_traceback(e.__traceback__)
         if error:
             raise error
 
