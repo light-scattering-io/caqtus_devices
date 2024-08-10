@@ -6,6 +6,15 @@ import attrs.setters
 from attrs import define, field
 from attrs.setters import frozen
 from attrs.validators import instance_of, ge, le
+from pulsestreamer import (
+    PulseStreamer,
+    TriggerStart,
+    TriggerRearm,
+    Sequence as PulseStreamerSequence,
+    OutputState,
+    ClockSource,
+)
+
 from caqtus.device import RuntimeDevice
 from caqtus.device.sequencer import (
     Sequencer,
@@ -19,14 +28,6 @@ from caqtus.device.sequencer.instructions import (
     Pattern,
     Concatenated,
     Repeated,
-)
-from pulsestreamer import (
-    PulseStreamer,
-    TriggerStart,
-    TriggerRearm,
-    Sequence as PulseStreamerSequence,
-    OutputState,
-    ClockSource,
 )
 from caqtus.types.recoverable_exceptions import ConnectionFailedError
 
@@ -138,7 +139,7 @@ class SwabianPulseStreamer(Sequencer, RuntimeDevice):
         self, instruction: SequencerInstruction
     ) -> PulseStreamerSequence:
         raise NotImplementedError(
-            f"Not implemented for type of instruction {type(instruction)}."
+            f"Can't program instruction with type {type(instruction)}."
         )
 
     @_construct_pulse_streamer_sequence.register
