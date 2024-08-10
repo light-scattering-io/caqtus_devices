@@ -25,6 +25,7 @@ from caqtus.device.sequencer.instructions import (
     Pattern,
     Concatenated,
     Repeated,
+    Ramp,
 )
 from caqtus.utils import log_exception
 
@@ -167,15 +168,21 @@ class NI6738AnalogCard(Sequencer, RuntimeDevice):
     def _values_from_instruction(
         self, instruction: SequencerInstruction
     ) -> list[np.ndarray]:
-        raise NotImplementedError(f"Instruction {instruction} is not supported")
+        raise NotImplementedError(
+            f"Instruction with type {type(instruction)} is not supported"
+        )
 
     @_values_from_instruction.register
-    def _(self, pattern: Pattern) -> list[np.ndarray]:
+    def _values_from_pattern(self, pattern: Pattern) -> list[np.ndarray]:
         values = pattern.array
         result = np.array([values[f"ch {ch}"] for ch in range(self.channel_number)])
-        if np.any(np.isnan(result)):
-            raise ValueError(f"Pattern {pattern} contains nan")
+        if not np.all(np.isfinite(result)):
+            raise ValueError(f"Pattern contains non-finite values")
         return [result]
+
+    @_values_from_instruction.register
+    def _values_from_ramp(self, ramp: Ramp):
+        return self._values_from_pattern(ramp.to_pattern())
 
     @_values_from_instruction.register
     def _(self, concatenate: Concatenated) -> list[np.ndarray]:

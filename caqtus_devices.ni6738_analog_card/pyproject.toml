@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "caqtus-devices-ni6738-analog-card"
-version = "1.6.0"
+version = "1.7.0"
 description = ""
 authors = ["Dear <lechadoq@gmail.com>"]
 readme = "README.md"
@@ -10,7 +10,7 @@ packages = [{ include = "caqtus_devices" }]
 python = ">=3.12, <3.13"
 
 nidaqmx = ">=0.9.0"
-caqtus-suite = ">=4.17.0"
+caqtus-suite = ">=5.0.0"
 
 
 [build-system]
