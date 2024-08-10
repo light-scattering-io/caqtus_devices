@@ -8,6 +8,7 @@ import attrs.validators
 from attrs import define, field
 from attrs.setters import frozen
 from attrs.validators import instance_of, ge
+
 from caqtus.device import RuntimeDevice
 from caqtus.device.sequencer.instructions import (
     SequencerInstruction,
@@ -16,8 +17,8 @@ from caqtus.device.sequencer.instructions import (
     Concatenated,
 )
 from caqtus.device.sequencer.runtime import Sequencer, Trigger, SoftwareTrigger
-from caqtus.utils import log_exception
 from caqtus.types.recoverable_exceptions import ConnectionFailedError
+from caqtus.utils import log_exception
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -125,7 +126,9 @@ class SpincorePulseBlaster(Sequencer, RuntimeDevice):
 
     @singledispatchmethod
     def _program_instruction(self, instruction: SequencerInstruction) -> int:
-        raise NotImplementedError(f"Not implemented for {type(instruction)}")
+        raise NotImplementedError(
+            f"Can't program instruction with type {type(instruction)}"
+        )
 
     @_program_instruction.register
     @log_exception(logger)
