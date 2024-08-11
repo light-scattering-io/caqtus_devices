@@ -10,10 +10,10 @@ from caqtus.device.sequencer import (
     AnalogChannelConfiguration,
     TimeStep,
 )
+from caqtus.device.sequencer import converter
 from caqtus.device.sequencer.channel_commands import Constant
 from caqtus.device.sequencer.trigger import SoftwareTrigger
 from caqtus.types.expression import Expression
-from caqtus.utils import serialization
 from ..runtime import NI6738AnalogCard
 
 
@@ -50,16 +50,12 @@ class NI6738SequencerConfiguration(SequencerConfiguration[NI6738AnalogCard]):
                 )
 
     @classmethod
-    def dump(cls, obj: NI6738SequencerConfiguration) -> serialization.JSON:
-        return serialization.converters["json"].unstructure(
-            obj, NI6738SequencerConfiguration
-        )
+    def dump(cls, obj: NI6738SequencerConfiguration):
+        return converter.unstructure(obj, NI6738SequencerConfiguration)
 
     @classmethod
-    def load(cls, data: serialization.JSON) -> NI6738SequencerConfiguration:
-        return serialization.converters["json"].structure(
-            data, NI6738SequencerConfiguration
-        )
+    def load(cls, data) -> NI6738SequencerConfiguration:
+        return converter.structure(data, NI6738SequencerConfiguration)
 
     @classmethod
     def default(cls) -> NI6738SequencerConfiguration:

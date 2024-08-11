@@ -1,15 +1,15 @@
 from typing import ClassVar, Self
 
 import attrs
+
 from caqtus.device.sequencer import (
     SequencerConfiguration,
     DigitalChannelConfiguration,
 )
+from caqtus.device.sequencer import converter
 from caqtus.device.sequencer.channel_commands import Constant
 from caqtus.device.sequencer.trigger import SoftwareTrigger
 from caqtus.types.expression import Expression
-from caqtus.utils import serialization
-
 from ..runtime import SwabianPulseStreamer
 
 
@@ -32,12 +32,12 @@ class SwabianPulseStreamerConfiguration(SequencerConfiguration[SwabianPulseStrea
         return (DigitalChannelConfiguration,) * cls.number_channels
 
     @classmethod
-    def dump(cls, config: Self) -> serialization.JSON:
-        return serialization.converters["json"].unstructure(config, cls)
+    def dump(cls, config: Self):
+        return converter.unstructure(config, cls)
 
     @classmethod
-    def load(cls, data: serialization.JSON) -> Self:
-        return serialization.converters["json"].structure(data, cls)
+    def load(cls, data) -> Self:
+        return converter.structure(data, cls)
 
     @classmethod
     def default(cls) -> Self:

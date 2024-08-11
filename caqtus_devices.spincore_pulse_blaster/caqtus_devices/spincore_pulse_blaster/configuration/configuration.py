@@ -12,9 +12,9 @@ from caqtus.device.sequencer import (
     SoftwareTrigger,
     TimeStep,
 )
+from caqtus.device.sequencer import converter
 from caqtus.device.sequencer.channel_commands import Constant
 from caqtus.types.expression import Expression
-from caqtus.utils import serialization
 from ..runtime import SpincorePulseBlaster
 
 
@@ -68,12 +68,12 @@ class SpincoreSequencerConfiguration(SequencerConfiguration[SpincorePulseBlaster
             )
 
     @classmethod
-    def dump(cls, configuration: SpincoreSequencerConfiguration) -> serialization.JSON:
-        return serialization.unstructure(configuration, SpincoreSequencerConfiguration)
+    def dump(cls, configuration: SpincoreSequencerConfiguration):
+        return converter.unstructure(configuration, SpincoreSequencerConfiguration)
 
     @classmethod
     def load(cls, data) -> SpincoreSequencerConfiguration:
-        return serialization.structure(data, SpincoreSequencerConfiguration)
+        return converter.structure(data, SpincoreSequencerConfiguration)
 
     @classmethod
     def default(cls) -> SpincoreSequencerConfiguration:
