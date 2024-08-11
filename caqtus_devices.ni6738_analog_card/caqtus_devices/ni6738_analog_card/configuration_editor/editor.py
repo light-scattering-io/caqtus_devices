@@ -1,3 +1,6 @@
+import decimal
+from typing import Optional
+
 from PySide6.QtWidgets import QLineEdit
 
 from caqtus.gui.condetrol.device_configuration_editors.sequencer_configuration_editor import (
@@ -9,10 +12,12 @@ from ..configuration import NI6738SequencerConfiguration
 class NI6738DeviceConfigEditor(
     SequencerConfigurationEditor[NI6738SequencerConfiguration]
 ):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.time_step_spinbox.setRange(2500, 100000)
+    def __init__(
+        self,
+        device_configuration: NI6738SequencerConfiguration,
+        parent: Optional[QLineEdit] = None,
+    ):
+        super().__init__(device_configuration, decimal.Decimal(1), 2500, 100000, parent)
 
         self._device_id = QLineEdit()
         self.form.insertRow(1, "Device id", self._device_id)

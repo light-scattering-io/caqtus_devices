@@ -1,14 +1,19 @@
 from __future__ import annotations
 
+import decimal
 from typing import ClassVar, Type
 
 import attrs
-from caqtus.device.sequencer import SequencerConfiguration, AnalogChannelConfiguration
+
+from caqtus.device.sequencer import (
+    SequencerConfiguration,
+    AnalogChannelConfiguration,
+    TimeStep,
+)
 from caqtus.device.sequencer.channel_commands import Constant
 from caqtus.device.sequencer.trigger import SoftwareTrigger
 from caqtus.types.expression import Expression
 from caqtus.utils import serialization
-
 from ..runtime import NI6738AnalogCard
 
 
@@ -27,10 +32,10 @@ class NI6738SequencerConfiguration(SequencerConfiguration[NI6738AnalogCard]):
         ),
         on_setattr=attrs.setters.pipe(attrs.setters.convert, attrs.setters.validate),
     )
-    time_step: int = attrs.field(
-        default=25000,
-        converter=int,
-        validator=attrs.validators.ge(2500),
+    time_step: TimeStep = attrs.field(
+        default=decimal.Decimal(2500),
+        converter=decimal.Decimal,
+        validator=attrs.validators.ge(decimal.Decimal(2500)),
         on_setattr=attrs.setters.pipe(attrs.setters.convert, attrs.setters.validate),
     )
 

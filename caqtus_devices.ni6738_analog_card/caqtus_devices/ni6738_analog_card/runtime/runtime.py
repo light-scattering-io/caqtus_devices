@@ -1,3 +1,4 @@
+import decimal
 import logging
 from contextlib import closing
 from functools import singledispatchmethod
@@ -19,6 +20,7 @@ from caqtus.device.sequencer import (
     Trigger,
     ExternalClockOnChange,
     TriggerEdge,
+    TimeStep,
 )
 from caqtus.device.sequencer.instructions import (
     SequencerInstruction,
@@ -27,12 +29,11 @@ from caqtus.device.sequencer.instructions import (
     Repeated,
     Ramp,
 )
+from caqtus.shot_compilation.lane_compilers.timing import ns
 from caqtus.utils import log_exception
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
-
-ns = 1e-9
 
 
 def wrap_nidaqmx_error(f):
@@ -61,8 +62,10 @@ class NI6738AnalogCard(Sequencer, RuntimeDevice):
 
     channel_number: ClassVar[int] = 32
 
-    time_step: int = attrs.field(
-        validator=[instance_of(int), ge(2500)], on_setattr=frozen
+    time_step: TimeStep = attrs.field(
+        converter=decimal.Decimal,
+        validator=ge(decimal.Decimal(2500)),
+        on_setattr=frozen,
     )
     device_id: str = attrs.field(validator=instance_of(str), on_setattr=frozen)
     trigger: Trigger = attrs.field(validator=instance_of(Trigger), on_setattr=frozen)
@@ -139,8 +142,9 @@ class NI6738AnalogCard(Sequencer, RuntimeDevice):
         self._task.stop()
 
     def _configure_timing(self, number_of_samples: int) -> None:
+        time_step = self.time_step * ns
         self._task.timing.cfg_samp_clk_timing(
-            rate=1 / (self.time_step * ns),
+            rate=float(1 / time_step),
             source=f"/{self.device_id}/PFI0",
             active_edge=nidaqmx.constants.Edge.RISING,
             sample_mode=nidaqmx.constants.AcquisitionType.FINITE,
@@ -149,7 +153,7 @@ class NI6738AnalogCard(Sequencer, RuntimeDevice):
 
         # only take into account a trigger pulse if it is long enough to avoid
         # triggering on glitches
-        self._task.timing.samp_clk_dig_fltr_min_pulse_width = self.time_step * ns / 8
+        self._task.timing.samp_clk_dig_fltr_min_pulse_width = float(time_step / 8)
         self._task.timing.samp_clk_dig_fltr_enable = True
 
     @log_exception(logger)
