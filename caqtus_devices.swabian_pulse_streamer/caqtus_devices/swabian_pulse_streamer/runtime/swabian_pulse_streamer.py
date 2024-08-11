@@ -22,6 +22,7 @@ from caqtus.device.sequencer import (
     ExternalTriggerStart,
     TriggerEdge,
     SoftwareTrigger,
+    TimeStep,
 )
 from caqtus.device.sequencer.instructions import (
     SequencerInstruction,
@@ -41,7 +42,7 @@ class SwabianPulseStreamer(Sequencer, RuntimeDevice):
     Attributes:
         ip_address: The IP address of the device.
         time_step: The smallest allowed time step, in nanoseconds.
-        The time step is fixed to 1 ns.
+            The time step is fixed to 1 ns.
         trigger: Indicates how the sequence is started and how it is clocked.
         clock_source: The hardware clock source of the device.
     """
@@ -50,7 +51,7 @@ class SwabianPulseStreamer(Sequencer, RuntimeDevice):
     channel_number: ClassVar[int] = 8
 
     ip_address: str = field(validator=instance_of(str), on_setattr=frozen)
-    time_step: int = field(validator=[ge(1), le(1)], on_setattr=frozen)
+    time_step: TimeStep = field(validator=[ge(1), le(1)], on_setattr=frozen)
 
     trigger: Trigger = field(
         factory=lambda: ExternalTriggerStart(edge=TriggerEdge.RISING),

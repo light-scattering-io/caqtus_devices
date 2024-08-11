@@ -1,3 +1,4 @@
+import decimal
 from typing import Optional
 
 from PySide6.QtWidgets import QLineEdit, QWidget
@@ -16,9 +17,13 @@ class SwabianPulseStreamerDeviceConfigEditor(
         config: SwabianPulseStreamerConfiguration,
         parent: Optional[QWidget] = None,
     ):
-        super().__init__(config, parent)
-
-        self.time_step_spinbox.setRange(1, 1)
+        super().__init__(
+            device_configuration=config,
+            time_step_increment=decimal.Decimal(1),
+            smallest_increment_multiple=1,
+            largest_increment_multiple=1,
+            parent=parent,
+        )
 
         self._ip_address = QLineEdit(self)
         self._ip_address.setText(config.ip_address)
