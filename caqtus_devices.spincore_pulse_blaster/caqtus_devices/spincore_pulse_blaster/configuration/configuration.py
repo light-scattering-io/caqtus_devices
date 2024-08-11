@@ -1,18 +1,20 @@
 from __future__ import annotations
 
+import decimal
 from typing import ClassVar, Type
 
 import attrs
+
 from caqtus.device.sequencer import (
     SequencerConfiguration,
     ChannelConfiguration,
     DigitalChannelConfiguration,
     SoftwareTrigger,
+    TimeStep,
 )
 from caqtus.device.sequencer.channel_commands import Constant
 from caqtus.types.expression import Expression
 from caqtus.utils import serialization
-
 from ..runtime import SpincorePulseBlaster
 
 
@@ -44,12 +46,26 @@ class SpincoreSequencerConfiguration(SequencerConfiguration[SpincorePulseBlaster
         ),
         on_setattr=attrs.setters.pipe(attrs.setters.convert, attrs.setters.validate),
     )
-    time_step: int = attrs.field(
-        default=50,
-        converter=int,
-        validator=attrs.validators.ge(50),
+    time_step: TimeStep = attrs.field(
+        default=decimal.Decimal(50),
+        converter=decimal.Decimal,
         on_setattr=attrs.setters.pipe(attrs.setters.convert, attrs.setters.validate),
     )
+
+    clock_cycle: ClassVar[int] = 10
+
+    @time_step.validator  # type: ignore
+    def _validate_time_step(self, _, value):
+        div, mod = divmod(value, self.clock_cycle)
+        if mod != 0:
+            raise ValueError(
+                f"Time step ({value}) must be a multiple of the clock cycle " f"(10)."
+            )
+        if not div >= 5:
+            raise ValueError(
+                f"Time step ({value}) must be at least 5 times the clock cycle "
+                f"({self.clock_cycle})."
+            )
 
     @classmethod
     def dump(cls, configuration: SpincoreSequencerConfiguration) -> serialization.JSON:

@@ -1,3 +1,4 @@
+import decimal
 import logging
 from collections.abc import Sequence, Mapping
 from enum import IntFlag
@@ -7,9 +8,10 @@ from typing import ClassVar
 import attrs.validators
 from attrs import define, field
 from attrs.setters import frozen
-from attrs.validators import instance_of, ge
+from attrs.validators import instance_of
 
 from caqtus.device import RuntimeDevice
+from caqtus.device.sequencer import TimeStep
 from caqtus.device.sequencer.instructions import (
     SequencerInstruction,
     Pattern,
@@ -42,19 +44,18 @@ class SpincorePulseBlaster(Sequencer, RuntimeDevice):
         board_number: The number used to refer to a given spincore pulseblaster.
         If there are multiple boards connected to the computer, they are numbered from
         0 to n-1.
-        spincore_lib_debug: If True, the spincore library will log debug messages in a file in the current working
-        directory. This can be useful to debug the program, but generates large files.
+        spincore_lib_debug: If True, the spincore library will log debug messages in a
+            file in the current working directory.
+            This can be useful to debug the program, but generates large files.
         time_step: The time step of the sequencer in nanoseconds.
-        trigger: Indicates how the sequence is started and how it is clocked. Only SoftwareTrigger is supported at the
-        moment.
+        trigger: Indicates how the sequence is started and how it is clocked.
+            Only SoftwareTrigger is supported at the moment.
     """
 
     channel_number: ClassVar[int] = 24
     clock_cycle: ClassVar[int] = 10
 
-    time_step: int = field(
-        validator=[instance_of(int), ge(5 * clock_cycle)], on_setattr=frozen
-    )
+    time_step: TimeStep = field(converter=decimal.Decimal, on_setattr=frozen)
     board_number: int = field(default=0, validator=instance_of(int), on_setattr=frozen)
     spincore_lib_debug: bool = field(
         default=False, validator=instance_of(bool), on_setattr=frozen
@@ -65,6 +66,20 @@ class SpincorePulseBlaster(Sequencer, RuntimeDevice):
         validator=attrs.validators.instance_of(Trigger),
         on_setattr=frozen,
     )
+
+    @time_step.validator  # type: ignore
+    def _validate_time_step(self, _, value):
+        div, mod = divmod(value, self.clock_cycle)
+        if mod != 0:
+            raise ValueError(
+                f"Time step ({value}) must be a multiple of the clock cycle "
+                f"({self.clock_cycle})."
+            )
+        if not div >= 5:
+            raise ValueError(
+                f"Time step ({value}) must be at least 5 times the clock cycle "
+                f"({self.clock_cycle})."
+            )
 
     @trigger.validator  # type: ignore
     def _validate_trigger(self, _, value):
@@ -93,12 +108,14 @@ class SpincorePulseBlaster(Sequencer, RuntimeDevice):
             )
         if self._spinapi.pb_select_board(self.board_number) != 0:
             raise ConnectionFailedError(
-                f"Can't access board {self.board_number}\n{self._spinapi.pb_get_error()}"
+                f"Can't access board {self.board_number}: "
+                f"{self._spinapi.pb_get_error()}"
             )
 
         if self._spinapi.pb_init() != 0:
             raise ConnectionFailedError(
-                f"Can't initialize board {self.board_number}\n{self._spinapi.pb_get_error()}"
+                f"Can't initialize board {self.board_number}: "
+                f"{self._spinapi.pb_get_error()}"
             )
         self._add_closing_callback(self._spinapi.pb_close)
 
@@ -107,8 +124,6 @@ class SpincorePulseBlaster(Sequencer, RuntimeDevice):
     @log_exception(logger)
     def update_parameters(self, sequence: SequencerInstruction) -> None:
         spinapi = self._spinapi
-        sequence_duration = len(sequence) * self.time_step * 1e-9
-        logger.debug(f"{sequence_duration=}")
         if spinapi.pb_start_programming(spinapi.PULSE_PROGRAM) != 0:
             raise RuntimeError(
                 f"Can't start programming sequence.{spinapi.pb_get_error()}"
@@ -141,16 +156,19 @@ class SpincorePulseBlaster(Sequencer, RuntimeDevice):
             self._program_continue(outputs, 1)
 
     @property
-    def tick_duration(self) -> float:
-        return self.time_step * self._spinapi.ns
-
-    @property
     def max_number_ticks(self) -> int:
-        return int((2**32 - 1) * self.clock_cycle // self.time_step)
+        cycles_per_step = int(self.time_step / self.clock_cycle)
+        return int((2**32 - 1) / cycles_per_step)
 
     @property
     def max_duration(self) -> float:
-        return self.max_number_ticks * self.time_step * self._spinapi.ns
+        return self.max_number_ticks * self._time_step * self._spinapi.ns
+
+    @property
+    def _time_step(self) -> int:
+        # We know that the time step is a multiple of the clock cycle, so it is an
+        # integer, and we can safely case it.
+        return int(self.time_step)
 
     def _program_continue(self, output_: Sequence[bool], number_ticks: int):
         spinapi = self._spinapi
@@ -175,7 +193,7 @@ class SpincorePulseBlaster(Sequencer, RuntimeDevice):
                     f" {self.max_duration / 2} s with"
                     f" {2*number_of_repetitions} repetitions. "
                 )
-        duration = remainder * self.time_step * spinapi.ns
+        duration = remainder * self._time_step * spinapi.ns
         if spinapi.pb_inst_pbonly(flags, spinapi.Inst.CONTINUE, 0, duration) < 0:
             raise RuntimeError(
                 "An error occurred when programming a continue instruction with"
@@ -212,7 +230,7 @@ class SpincorePulseBlaster(Sequencer, RuntimeDevice):
             )
         if (
             loop_beginning := spinapi.pb_inst_pbonly(
-                for_flag, spinapi.Inst.LOOP, rep, self.time_step * spinapi.ns
+                for_flag, spinapi.Inst.LOOP, rep, self._time_step * spinapi.ns
             )
         ) < 0:
             raise RuntimeError(
@@ -227,7 +245,7 @@ class SpincorePulseBlaster(Sequencer, RuntimeDevice):
                 end_for_flag,
                 spinapi.Inst.END_LOOP,
                 loop_beginning,
-                self.time_step * spinapi.ns,
+                self._time_step * spinapi.ns,
             )
             < 0
         ):
@@ -248,7 +266,7 @@ class SpincorePulseBlaster(Sequencer, RuntimeDevice):
         flags = self._output_to_flags(outputs)
         if (
             spinapi.pb_inst_pbonly(
-                flags, spinapi.Inst.STOP, 0, self.time_step * spinapi.ns
+                flags, spinapi.Inst.STOP, 0, self._time_step * spinapi.ns
             )
             < 0
         ):
