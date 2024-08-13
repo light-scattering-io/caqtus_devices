@@ -1,4 +1,4 @@
-from caqtus.device.controller import DeviceController
+from caqtus.device import DeviceController
 
 from ._proxy import SiglentSDG6022XProxy
 from ._runtime import SiglentState
