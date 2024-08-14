@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "caqtus-devices-spincore-pulse-blaster"
-version = "1.10.0"
+version = "1.11.0"
 description = ""
 authors = ["Dear <lechadoq@gmail.com>"]
 readme = "README.md"
@@ -9,7 +9,7 @@ packages = [{include = "caqtus_devices"}]
 [tool.poetry.dependencies]
 python = "^3.12, <3.13"
 
-caqtus-suite = ">=5.1"
+caqtus-suite = ">=5.2"
 
 [build-system]
 requires = ["poetry-core"]

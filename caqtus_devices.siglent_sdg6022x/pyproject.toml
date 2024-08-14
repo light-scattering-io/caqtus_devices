@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "caqtus-devices-siglent-sdg6022x"
-version = "2.4.0"
+version = "2.5.0"
 description = ""
 authors = ["Dear <lechadoq@gmail.com>"]
 readme = "README.md"
@@ -12,7 +12,7 @@ python = "^3.12, <3.13"
 pyvisa = "^1.14.1"
 attrs = "^23.2.0"
 cattrs = "^23.2.3"
-caqtus-suite = ">=4.17.0"
+caqtus-suite = ">=5.2"
 
 
 [tool.poetry.group.test.dependencies]
