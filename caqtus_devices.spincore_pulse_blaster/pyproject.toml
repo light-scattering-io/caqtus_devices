@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "caqtus-devices-spincore-pulse-blaster"
-version = "1.11.0"
+version = "1.11.1"
 description = ""
 authors = ["Dear <lechadoq@gmail.com>"]
 readme = "README.md"

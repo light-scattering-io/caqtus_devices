@@ -27,9 +27,8 @@ class SwabianPulseStreamerConfiguration(SequencerConfiguration[SwabianPulseStrea
         on_setattr=attrs.setters.pipe(attrs.setters.convert, attrs.setters.validate),
     )
 
-    @classmethod
-    def channel_types(cls) -> tuple[type[DigitalChannelConfiguration], ...]:
-        return (DigitalChannelConfiguration,) * cls.number_channels
+    def channel_types(self) -> tuple[type[DigitalChannelConfiguration], ...]:
+        return (DigitalChannelConfiguration,) * self.number_channels
 
     @classmethod
     def dump(cls, config: Self):

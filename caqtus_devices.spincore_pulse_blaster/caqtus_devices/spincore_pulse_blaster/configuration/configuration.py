@@ -9,9 +9,9 @@ from caqtus.device.sequencer import (
     SequencerConfiguration,
     ChannelConfiguration,
     DigitalChannelConfiguration,
-    SoftwareTrigger,
     TimeStep,
 )
+from caqtus.device.sequencer.trigger import SoftwareTrigger
 from caqtus.device.sequencer import converter
 from caqtus.device.sequencer.channel_commands import Constant
 from caqtus.types.expression import Expression
