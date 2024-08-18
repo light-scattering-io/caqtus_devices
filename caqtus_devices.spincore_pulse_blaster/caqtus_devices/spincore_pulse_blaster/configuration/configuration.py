@@ -22,7 +22,7 @@ from ..runtime import SpincorePulseBlaster
 class SpincoreSequencerConfiguration(SequencerConfiguration[SpincorePulseBlaster]):
     """Holds the static configuration of a spincore sequencer device.
 
-    Fields:
+    Attributes:
         board_number: The number of the board to use. With only one board connected,
             this number is usually 0.
         time_step: The quantization time step used. All times during a run are multiples

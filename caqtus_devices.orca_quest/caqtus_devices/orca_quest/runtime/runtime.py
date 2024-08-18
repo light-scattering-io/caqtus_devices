@@ -26,7 +26,7 @@ class OrcaQuestCamera(Camera):
     Beware that not all roi values are allowed for this camera.
     In doubt, try to check if the ROI is valid using the HCImageLive software.
 
-    Fields:
+    Attributes:
         camera_number: The camera number used to identify the specific camera.
     """
 
@@ -103,15 +103,15 @@ class OrcaQuestCamera(Camera):
             # If it bounces, the acquisition will be messed up.
             # To prevent bouncing, it might be necessary to add a 50 Ohm resistor
             # before the camera trigger input.
-            properties[
-                dcamapi4.DCAM_IDPROP.TRIGGERSOURCE
-            ] = dcamapi4.DCAMPROP.TRIGGERSOURCE.EXTERNAL
-            properties[
-                dcamapi4.DCAM_IDPROP.TRIGGERACTIVE
-            ] = dcamapi4.DCAMPROP.TRIGGERACTIVE.LEVEL
-            properties[
-                dcamapi4.DCAM_IDPROP.TRIGGERPOLARITY
-            ] = dcamapi4.DCAMPROP.TRIGGERPOLARITY.POSITIVE
+            properties[dcamapi4.DCAM_IDPROP.TRIGGERSOURCE] = (
+                dcamapi4.DCAMPROP.TRIGGERSOURCE.EXTERNAL
+            )
+            properties[dcamapi4.DCAM_IDPROP.TRIGGERACTIVE] = (
+                dcamapi4.DCAMPROP.TRIGGERACTIVE.LEVEL
+            )
+            properties[dcamapi4.DCAM_IDPROP.TRIGGERPOLARITY] = (
+                dcamapi4.DCAMPROP.TRIGGERPOLARITY.POSITIVE
+            )
         else:
             raise NotImplementedError("Only external trigger is supported")
             # Need to handle different exposures when using internal trigger, so it is

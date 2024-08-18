@@ -53,7 +53,7 @@ def wrap_nidaqmx_error(f):
 class NI6738AnalogCard(Sequencer, RuntimeDevice):
     """Device class to program the NI6738 analog card.
 
-    Fields:
+    Attributes:
         device_id: The ID of the device to use.
         It is the name of the device as it appears in the NI MAX software, e.g. Dev0.
         time_step: The smallest allowed time step, in nanoseconds.
