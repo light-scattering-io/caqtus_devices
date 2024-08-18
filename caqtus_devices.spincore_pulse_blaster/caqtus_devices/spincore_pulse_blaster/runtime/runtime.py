@@ -11,14 +11,14 @@ from attrs.setters import frozen
 from attrs.validators import instance_of
 
 from caqtus.device import RuntimeDevice
-from caqtus.device.sequencer import TimeStep
+from caqtus.device.sequencer import Sequencer, TimeStep
 from caqtus.device.sequencer.instructions import (
     SequencerInstruction,
     Pattern,
     Repeated,
     Concatenated,
 )
-from caqtus.device.sequencer.runtime import Sequencer, Trigger, SoftwareTrigger
+from caqtus.device.sequencer.trigger import Trigger, SoftwareTrigger
 from caqtus.types.recoverable_exceptions import ConnectionFailedError
 from caqtus.utils import log_exception
 
