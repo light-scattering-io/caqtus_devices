@@ -18,10 +18,6 @@ from pulsestreamer import (
 from caqtus.device import RuntimeDevice
 from caqtus.device.sequencer import (
     Sequencer,
-    Trigger,
-    ExternalTriggerStart,
-    TriggerEdge,
-    SoftwareTrigger,
     TimeStep,
 )
 from caqtus.device.sequencer.instructions import (
@@ -29,6 +25,12 @@ from caqtus.device.sequencer.instructions import (
     Pattern,
     Concatenated,
     Repeated,
+)
+from caqtus.device.sequencer.trigger import (
+    Trigger,
+    ExternalTriggerStart,
+    TriggerEdge,
+    SoftwareTrigger,
 )
 from caqtus.types.recoverable_exceptions import ConnectionFailedError
 
