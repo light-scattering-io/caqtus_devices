@@ -1,3 +1,4 @@
+import contextlib
 import decimal
 import logging
 from contextlib import closing
@@ -26,6 +27,7 @@ from caqtus.device.sequencer.instructions import (
     Repeated,
     Ramp,
 )
+from caqtus.device.sequencer.runtime import ProgrammedSequence, SequenceStatus
 from caqtus.device.sequencer.trigger import (
     Trigger,
     ExternalClockOnChange,
@@ -102,14 +104,9 @@ class NI6738AnalogCard(Sequencer, RuntimeDevice):
 
     @log_exception(logger)
     @wrap_nidaqmx_error
-    def update_parameters(self, sequence: SequencerInstruction) -> None:
-        """Write a sequence of voltages to the analog card."""
-
-        self._stop_task()
-
+    def program_sequence(self, sequence: SequencerInstruction) -> ProgrammedSequence:
         self._program_sequence(sequence)
-
-        self._set_sequence_programmed()
+        return _ProgrammedSequence(self._task)
 
     def _program_sequence(self, sequence: SequencerInstruction) -> None:
         logger.debug("Programmed ni6738")
@@ -138,11 +135,6 @@ class NI6738AnalogCard(Sequencer, RuntimeDevice):
                 f"Could not write all values to the analog card, wrote {written}/{values.shape[1]}"
             )
 
-    def _stop_task(self) -> None:
-        if not self._task.is_task_done():
-            self._task.wait_until_done(timeout=0)
-        self._task.stop()
-
     def _configure_timing(self, number_of_samples: int) -> None:
         time_step = self.time_step * ns
         self._task.timing.cfg_samp_clk_timing(
@@ -157,18 +149,6 @@ class NI6738AnalogCard(Sequencer, RuntimeDevice):
         # triggering on glitches
         self._task.timing.samp_clk_dig_fltr_min_pulse_width = float(time_step / 8)
         self._task.timing.samp_clk_dig_fltr_enable = True
-
-    @log_exception(logger)
-    @wrap_nidaqmx_error
-    def start_sequence(self) -> None:
-        super().start_sequence()
-        self._task.start()
-
-    @log_exception(logger)
-    @wrap_nidaqmx_error
-    def has_sequence_finished(self) -> bool:
-        super().has_sequence_finished()
-        return self._task.is_task_done()
 
     @singledispatchmethod
     def _values_from_instruction(
@@ -204,3 +184,26 @@ class NI6738AnalogCard(Sequencer, RuntimeDevice):
                 "Only one instruction is supported in a repeat block at the moment"
             )
         return self._values_from_instruction(repeat.instruction.to_pattern())
+
+
+class _ProgrammedSequence(ProgrammedSequence):
+    def __init__(self, task: nidaqmx.Task):
+        self._task = task
+
+    @contextlib.contextmanager
+    def run(self):
+        self._task.start()
+        try:
+            yield _SequenceStatus(self._task)
+            self._task.wait_until_done(timeout=0)
+        finally:
+            self._task.stop()
+
+
+class _SequenceStatus(SequenceStatus):
+    def __init__(self, task: nidaqmx.Task):
+        self._task = task
+
+    @wrap_nidaqmx_error
+    def is_finished(self) -> bool:
+        return self._task.is_task_done()
