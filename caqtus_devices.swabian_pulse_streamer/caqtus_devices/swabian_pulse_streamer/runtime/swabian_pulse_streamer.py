@@ -1,7 +1,8 @@
+import contextlib
 import decimal
 import logging
 from functools import singledispatchmethod
-from typing import Optional, ClassVar, Literal
+from typing import ClassVar, Literal
 
 import attrs.setters
 from attrs import define, field
@@ -27,6 +28,7 @@ from caqtus.device.sequencer.instructions import (
     Concatenated,
     Repeated,
 )
+from caqtus.device.sequencer.runtime import ProgrammedSequence, SequenceStatus
 from caqtus.device.sequencer.trigger import (
     Trigger,
     ExternalTriggerStart,
@@ -67,7 +69,6 @@ class SwabianPulseStreamer(Sequencer, RuntimeDevice):
     )
 
     _pulse_streamer: PulseStreamer = field(init=False)
-    _sequence: Optional[PulseStreamerSequence] = field(default=None, init=False)
 
     @trigger.validator  # type: ignore
     def _validate_trigger(self, _, value):
@@ -114,31 +115,18 @@ class SwabianPulseStreamer(Sequencer, RuntimeDevice):
             raise ValueError("Only supports software trigger.")
         self._pulse_streamer.setTrigger(start, TriggerRearm.MANUAL)
 
-    def update_parameters(self, sequence: SequencerInstruction) -> None:
-        super().update_parameters(sequence=sequence)
-        self._sequence = self._construct_pulse_streamer_sequence(sequence)
+    def program_sequence(self, sequence: SequencerInstruction) -> ProgrammedSequence:
+        sequence = self._construct_pulse_streamer_sequence(sequence)
         last_values = sequence[-1]
         enabled_output = [
             channel
             for channel in range(self.channel_number)
             if last_values[f"ch {channel}"]
         ]
-        self._final_state = OutputState(enabled_output, 0.0, 0.0)
-        self._set_sequence_programmed()
-
-    def start_sequence(self) -> None:
-        super().start_sequence()
-        if not self._sequence:
-            raise RuntimeError("The sequence has not been set yet.")
-        self._pulse_streamer.stream(
-            seq=self._sequence, n_runs=1, final=self._final_state
+        final_state = OutputState(enabled_output, 0.0, 0.0)
+        return _ProgrammedSequence(
+            self._pulse_streamer, sequence, final_state, self.trigger
         )
-        if isinstance(self.trigger, SoftwareTrigger):
-            self._pulse_streamer.startNow()
-
-    def has_sequence_finished(self) -> bool:
-        super().has_sequence_finished()
-        return self._pulse_streamer.hasFinished()
 
     @singledispatchmethod
     def _construct_pulse_streamer_sequence(
@@ -186,3 +174,42 @@ class SwabianPulseStreamer(Sequencer, RuntimeDevice):
                 self._construct_pulse_streamer_sequence(repeat.instruction)
                 * repeat.repetitions
             )
+
+
+class _ProgrammedSequence(ProgrammedSequence):
+    def __init__(
+        self,
+        pulse_streamer: PulseStreamer,
+        sequence: PulseStreamerSequence,
+        final_state: OutputState,
+        trigger: Trigger,
+    ):
+        self._pulse_streamer = pulse_streamer
+        self._sequence = sequence
+        self._trigger = trigger
+        self._final_state = final_state
+
+    @contextlib.contextmanager
+    def run(self):
+        self._pulse_streamer.stream(
+            seq=self._sequence, n_runs=1, final=self._final_state
+        )
+        if isinstance(self._trigger, SoftwareTrigger):
+            self._pulse_streamer.startNow()
+        status = _SequenceStatus(self._pulse_streamer)
+        try:
+            yield status
+            if not status.is_finished():
+                raise RuntimeError(
+                    "Run block exited without error before sequence finished"
+                )
+        finally:
+            self._pulse_streamer.constant(self._final_state)
+
+
+class _SequenceStatus(SequenceStatus):
+    def __init__(self, pulse_streamer: PulseStreamer):
+        self._pulse_streamer = pulse_streamer
+
+    def is_finished(self) -> bool:
+        return self._pulse_streamer.hasFinished()
