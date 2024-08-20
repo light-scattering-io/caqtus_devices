@@ -116,7 +116,7 @@ class SwabianPulseStreamer(Sequencer, RuntimeDevice):
         self._pulse_streamer.setTrigger(start, TriggerRearm.MANUAL)
 
     def program_sequence(self, sequence: SequencerInstruction) -> ProgrammedSequence:
-        sequence = self._construct_pulse_streamer_sequence(sequence)
+        seq = self._construct_pulse_streamer_sequence(sequence)
         last_values = sequence[-1]
         enabled_output = [
             channel
@@ -124,9 +124,8 @@ class SwabianPulseStreamer(Sequencer, RuntimeDevice):
             if last_values[f"ch {channel}"]
         ]
         final_state = OutputState(enabled_output, 0.0, 0.0)
-        return _ProgrammedSequence(
-            self._pulse_streamer, sequence, final_state, self.trigger
-        )
+        self._pulse_streamer.stream(seq=seq, n_runs=1, final=final_state)
+        return _ProgrammedSequence(self._pulse_streamer, self.trigger)
 
     @singledispatchmethod
     def _construct_pulse_streamer_sequence(
@@ -180,23 +179,17 @@ class _ProgrammedSequence(ProgrammedSequence):
     def __init__(
         self,
         pulse_streamer: PulseStreamer,
-        sequence: PulseStreamerSequence,
-        final_state: OutputState,
         trigger: Trigger,
     ):
         self._pulse_streamer = pulse_streamer
-        self._sequence = sequence
         self._trigger = trigger
-        self._final_state = final_state
 
     @contextlib.contextmanager
     def run(self):
-        self._pulse_streamer.stream(
-            seq=self._sequence, n_runs=1, final=self._final_state
-        )
+        status = _SequenceStatus(self._pulse_streamer)
         if isinstance(self._trigger, SoftwareTrigger):
             self._pulse_streamer.startNow()
-        status = _SequenceStatus(self._pulse_streamer)
+        # Nothing do start if waiting for external trigger
         try:
             yield status
             if not status.is_finished():
@@ -204,7 +197,7 @@ class _ProgrammedSequence(ProgrammedSequence):
                     "Run block exited without error before sequence finished"
                 )
         finally:
-            self._pulse_streamer.constant(self._final_state)
+            self._pulse_streamer.forceFinal()
 
 
 class _SequenceStatus(SequenceStatus):
