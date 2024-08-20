@@ -1,3 +1,4 @@
+import decimal
 import logging
 from functools import singledispatchmethod
 from typing import Optional, ClassVar, Literal
@@ -18,10 +19,6 @@ from pulsestreamer import (
 from caqtus.device import RuntimeDevice
 from caqtus.device.sequencer import (
     Sequencer,
-    Trigger,
-    ExternalTriggerStart,
-    TriggerEdge,
-    SoftwareTrigger,
     TimeStep,
 )
 from caqtus.device.sequencer.instructions import (
@@ -29,6 +26,12 @@ from caqtus.device.sequencer.instructions import (
     Pattern,
     Concatenated,
     Repeated,
+)
+from caqtus.device.sequencer.trigger import (
+    Trigger,
+    ExternalTriggerStart,
+    TriggerEdge,
+    SoftwareTrigger,
 )
 from caqtus.types.recoverable_exceptions import ConnectionFailedError
 
@@ -51,7 +54,9 @@ class SwabianPulseStreamer(Sequencer, RuntimeDevice):
     channel_number: ClassVar[int] = 8
 
     ip_address: str = field(validator=instance_of(str), on_setattr=frozen)
-    time_step: TimeStep = field(validator=[ge(1), le(1)], on_setattr=frozen)
+    time_step: TimeStep = field(
+        validator=[ge(decimal.Decimal(1)), le(decimal.Decimal(1))], on_setattr=frozen
+    )
 
     trigger: Trigger = field(
         factory=lambda: ExternalTriggerStart(edge=TriggerEdge.RISING),
@@ -65,7 +70,7 @@ class SwabianPulseStreamer(Sequencer, RuntimeDevice):
     _sequence: Optional[PulseStreamerSequence] = field(default=None, init=False)
 
     @trigger.validator  # type: ignore
-    def _validate_trigger(self, attribute, value):
+    def _validate_trigger(self, _, value):
         if not isinstance(value, (ExternalTriggerStart, SoftwareTrigger)):
             raise ValueError("Only supports software or external trigger start.")
 
