@@ -1,3 +1,4 @@
+import contextlib
 import decimal
 import logging
 from collections.abc import Sequence, Mapping
@@ -18,6 +19,7 @@ from caqtus.device.sequencer.instructions import (
     Repeated,
     Concatenated,
 )
+from caqtus.device.sequencer.runtime import ProgrammedSequence, SequenceStatus
 from caqtus.device.sequencer.trigger import Trigger, SoftwareTrigger
 from caqtus.types.recoverable_exceptions import ConnectionFailedError
 from caqtus.utils import log_exception
@@ -121,8 +123,7 @@ class SpincorePulseBlaster(Sequencer, RuntimeDevice):
 
         self._spinapi.pb_core_clock(1e3 / self.clock_cycle)
 
-    @log_exception(logger)
-    def update_parameters(self, sequence: SequencerInstruction) -> None:
+    def program_sequence(self, sequence: SequencerInstruction) -> ProgrammedSequence:
         spinapi = self._spinapi
         if spinapi.pb_start_programming(spinapi.PULSE_PROGRAM) != 0:
             raise RuntimeError(
@@ -137,7 +138,7 @@ class SpincorePulseBlaster(Sequencer, RuntimeDevice):
                 "An error occurred when finishing programming the sequence."
                 f"{spinapi.pb_get_error()}"
             )
-        self._set_sequence_programmed()
+        return _ProgrammedSequence(spinapi)
 
     @singledispatchmethod
     def _program_instruction(self, instruction: SequencerInstruction) -> int:
@@ -281,19 +282,38 @@ class SpincorePulseBlaster(Sequencer, RuntimeDevice):
             flags |= int(state) << channel
         return flags
 
-    @log_exception(logger)
-    def start_sequence(self) -> None:
+
+class _ProgrammedSequence(ProgrammedSequence):
+    def __init__(self, spinapi):
+        self._spinapi = spinapi
+
+    @contextlib.contextmanager
+    def run(self):
         spinapi = self._spinapi
-        super().start_sequence()
         if spinapi.pb_reset() != 0:
             raise RuntimeError(f"Can't reset the board. {spinapi.pb_get_error()}")
 
         if spinapi.pb_start() != 0:
             raise RuntimeError(f"Can't start the sequence. {spinapi.pb_get_error()}")
+        status = _SequenceStatus(spinapi)
+        try:
+            yield status
+            if not status.is_finished():
+                while not status.is_finished():
+                    pass
+                raise RuntimeError("Run block exited before the sequence finished")
+        finally:
+            if spinapi.pb_stop() != 0:
+                raise RuntimeError(
+                    f"Error when stopping the sequence. {spinapi.pb_get_error()}"
+                )
 
-    @log_exception(logger)
-    def has_sequence_finished(self) -> bool:
+
+class _SequenceStatus(SequenceStatus):
+    def __init__(self, spinapi):
+        self._spinapi = spinapi
+
+    def is_finished(self) -> bool:
         spinapi = self._spinapi
-        super().has_sequence_finished()
         is_running = spinapi.pb_read_status() & SpincoreStatus.Running
         return not is_running
