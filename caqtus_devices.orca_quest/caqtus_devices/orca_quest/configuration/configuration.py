@@ -4,8 +4,9 @@ from typing import TYPE_CHECKING
 
 import attrs
 from caqtus.device.camera import CameraConfiguration
+from caqtus.types.image import Width, Height
+from caqtus.types.image.roi import RectangularROI
 from caqtus.utils import serialization
-from caqtus.utils.roi import RectangularROI, Width, Height
 
 if TYPE_CHECKING:
     # We avoid importing the runtime module because it imports the dcam dependency that
