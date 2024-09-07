@@ -28,7 +28,7 @@ from caqtus.device.sequencer.instructions import (
     Ramp,
 )
 from caqtus.device.sequencer.runtime import ProgrammedSequence, SequenceStatus
-from caqtus.device.sequencer.timming import ns
+from caqtus.device.sequencer.timing import ns
 from caqtus.device.sequencer.trigger import (
     Trigger,
     ExternalClockOnChange,
