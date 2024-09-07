@@ -28,12 +28,12 @@ from caqtus.device.sequencer.instructions import (
     Ramp,
 )
 from caqtus.device.sequencer.runtime import ProgrammedSequence, SequenceStatus
+from caqtus.device.sequencer.timming import ns
 from caqtus.device.sequencer.trigger import (
     Trigger,
     ExternalClockOnChange,
     TriggerEdge,
 )
-from caqtus.shot_compilation.lane_compilers.timing import ns
 from caqtus.utils import log_exception
 
 logger = logging.getLogger(__name__)
@@ -132,7 +132,8 @@ class NI6738AnalogCard(Sequencer, RuntimeDevice):
             )
         ) != values.shape[1]:
             raise RuntimeError(
-                f"Could not write all values to the analog card, wrote {written}/{values.shape[1]}"
+                f"Could not write all values to the analog card, "
+                f"wrote {written}/{values.shape[1]}"
             )
 
     def _configure_timing(self, number_of_samples: int) -> None:
@@ -163,7 +164,7 @@ class NI6738AnalogCard(Sequencer, RuntimeDevice):
         values = pattern.array
         result = np.array([values[f"ch {ch}"] for ch in range(self.channel_number)])
         if not np.all(np.isfinite(result)):
-            raise ValueError(f"Pattern contains non-finite values")
+            raise ValueError("Pattern contains non-finite values")
         return [result]
 
     @_values_from_instruction.register
