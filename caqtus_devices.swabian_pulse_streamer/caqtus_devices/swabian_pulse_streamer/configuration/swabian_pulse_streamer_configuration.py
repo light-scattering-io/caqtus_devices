@@ -8,6 +8,7 @@ from caqtus.device.sequencer import (
 )
 from caqtus.device.sequencer import converter
 from caqtus.device.sequencer.channel_commands import Constant
+from caqtus.device.sequencer.timing import to_time_step
 from caqtus.device.sequencer.trigger import SoftwareTrigger
 from caqtus.types.expression import Expression
 from ..runtime import SwabianPulseStreamer
@@ -42,7 +43,7 @@ class SwabianPulseStreamerConfiguration(SequencerConfiguration[SwabianPulseStrea
     def default(cls) -> Self:
         return SwabianPulseStreamerConfiguration(
             remote_server=None,
-            time_step=1,
+            time_step=to_time_step(1),
             trigger=SoftwareTrigger(),
             ip_address="...",
             channels=tuple(

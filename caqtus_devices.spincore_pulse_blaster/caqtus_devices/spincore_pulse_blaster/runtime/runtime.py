@@ -278,7 +278,7 @@ class SpincorePulseBlaster(Sequencer, RuntimeDevice):
 
     def _output_to_flags(self, states: Sequence[bool]) -> int:
         flags = 0
-        for channel, state in zip(range(self.channel_number), states):
+        for channel, state in zip(range(self.channel_number), states, strict=True):
             flags |= int(state) << channel
         return flags
 

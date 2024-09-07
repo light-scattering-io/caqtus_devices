@@ -11,9 +11,10 @@ from caqtus.device.sequencer import (
     DigitalChannelConfiguration,
     TimeStep,
 )
-from caqtus.device.sequencer.trigger import SoftwareTrigger
 from caqtus.device.sequencer import converter
 from caqtus.device.sequencer.channel_commands import Constant
+from caqtus.device.sequencer.timing import to_time_step
+from caqtus.device.sequencer.trigger import SoftwareTrigger
 from caqtus.types.expression import Expression
 from ..runtime import SpincorePulseBlaster
 
@@ -80,7 +81,7 @@ class SpincoreSequencerConfiguration(SequencerConfiguration[SpincorePulseBlaster
         return SpincoreSequencerConfiguration(
             remote_server=None,
             board_number=0,
-            time_step=50,
+            time_step=to_time_step(50),
             channels=tuple(
                 [
                     DigitalChannelConfiguration(

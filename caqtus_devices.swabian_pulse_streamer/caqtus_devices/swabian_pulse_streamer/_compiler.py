@@ -1,4 +1,4 @@
-from caqtus.device import DeviceName, DeviceParameter
+from caqtus.device import DeviceName
 from caqtus.device.sequencer import SequencerCompiler
 from caqtus.shot_compilation import SequenceContext
 
@@ -11,8 +11,8 @@ class SwabianPulseStreamerCompiler(SequencerCompiler):
         configuration = sequence_context.get_device_configuration(device_name)
         if not isinstance(configuration, SwabianPulseStreamerConfiguration):
             raise TypeError(
-                f"Expected {SwabianPulseStreamerConfiguration} for device {device_name}, "
-                f"got {type(configuration)}"
+                f"Expected {SwabianPulseStreamerConfiguration} for device "
+                f"{device_name}, got {type(configuration)}"
             )
         self.configuration = configuration
         self.device_name = device_name
@@ -20,6 +20,6 @@ class SwabianPulseStreamerCompiler(SequencerCompiler):
     def compile_initialization_parameters(self):
         return {
             **super().compile_initialization_parameters(),
-            DeviceParameter("name"): self.device_name,
-            DeviceParameter("ip_address"): self.configuration.ip_address,
+            "name": self.device_name,
+            "ip_address": self.configuration.ip_address,
         }

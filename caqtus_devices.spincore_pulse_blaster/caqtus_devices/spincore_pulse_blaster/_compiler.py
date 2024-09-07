@@ -1,4 +1,4 @@
-from caqtus.device import DeviceName, DeviceParameter
+from caqtus.device import DeviceName
 from caqtus.device.sequencer import SequencerCompiler
 from caqtus.shot_compilation import SequenceContext
 
@@ -20,6 +20,6 @@ class SpincoreSequencerCompiler(SequencerCompiler):
     def compile_initialization_parameters(self):
         return {
             **super().compile_initialization_parameters(),
-            DeviceParameter("name"): self.device_name,
-            DeviceParameter("board_number"): self.configuration.board_number,
+            "name": self.device_name,
+            "board_number": self.configuration.board_number,
         }
