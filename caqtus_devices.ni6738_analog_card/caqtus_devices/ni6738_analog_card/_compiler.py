@@ -1,9 +1,8 @@
 from typing import Any
 
-from caqtus.device import DeviceName, DeviceParameter
+from caqtus.device import DeviceName
 from caqtus.device.sequencer import SequencerCompiler
 from caqtus.shot_compilation import SequenceContext
-
 from .configuration import NI6738SequencerConfiguration
 
 
@@ -19,9 +18,9 @@ class NI6738SequencerCompiler(SequencerCompiler):
         self.configuration = configuration
         self.device_name = device_name
 
-    def compile_initialization_parameters(self) -> dict[DeviceParameter, Any]:
+    def compile_initialization_parameters(self) -> dict[str, Any]:
         return {
             **super().compile_initialization_parameters(),
-            DeviceParameter("name"): self.device_name,
-            DeviceParameter("device_id"): self.configuration.device_id,
+            "name": self.device_name,
+            "device_id": self.configuration.device_id,
         }
