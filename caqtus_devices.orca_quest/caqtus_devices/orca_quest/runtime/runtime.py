@@ -10,7 +10,7 @@ from caqtus.device.camera import Camera, CameraTimeoutError
 from caqtus.types.image import Image
 from caqtus.types.recoverable_exceptions import ConnectionFailedError
 from caqtus.utils import log_exception
-from caqtus.utils.contextlib import close_on_error
+from caqtus.utils.context_managers import close_on_error
 
 from . import dcam, dcamapi4
 

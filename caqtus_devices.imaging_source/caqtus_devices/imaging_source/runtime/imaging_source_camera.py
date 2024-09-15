@@ -22,7 +22,7 @@ from caqtus.types.recoverable_exceptions import (
     ConnectionFailedError,
     RecoverableException,
 )
-from caqtus.utils.contextlib import close_on_error
+from caqtus.utils.context_managers import close_on_error
 from . import tisgrabber as tis
 
 logger = logging.getLogger(__name__)

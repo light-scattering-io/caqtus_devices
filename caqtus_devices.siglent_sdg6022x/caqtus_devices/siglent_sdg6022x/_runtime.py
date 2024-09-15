@@ -11,7 +11,7 @@ import pyvisa
 import pyvisa.constants
 from caqtus.device import Device
 from caqtus.types.recoverable_exceptions import ConnectionFailedError, InvalidValueError
-from caqtus.utils.contextlib import close_on_error
+from caqtus.utils.context_managers import close_on_error
 
 logger = logging.getLogger(__name__)
 
