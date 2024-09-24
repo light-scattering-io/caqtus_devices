@@ -20,19 +20,19 @@ from caqtus.device.sequencer import (
     Sequencer,
     TimeStep,
 )
-from caqtus.device.sequencer.instructions import (
-    SequencerInstruction,
-    Pattern,
-    Concatenated,
-    Repeated,
-    Ramp,
-)
 from caqtus.device.sequencer.runtime import ProgrammedSequence, SequenceStatus
 from caqtus.device.sequencer.timing import ns
 from caqtus.device.sequencer.trigger import (
     Trigger,
     ExternalClockOnChange,
     TriggerEdge,
+)
+from caqtus.shot_compilation.timed_instructions import (
+    TimedInstruction,
+    Pattern,
+    Concatenated,
+    Repeated,
+    Ramp,
 )
 from caqtus.utils import log_exception
 
@@ -104,11 +104,11 @@ class NI6738AnalogCard(Sequencer, RuntimeDevice):
 
     @log_exception(logger)
     @wrap_nidaqmx_error
-    def program_sequence(self, sequence: SequencerInstruction) -> ProgrammedSequence:
+    def program_sequence(self, sequence: TimedInstruction) -> ProgrammedSequence:
         self._program_sequence(sequence)
         return _ProgrammedSequence(self._task)
 
-    def _program_sequence(self, sequence: SequencerInstruction) -> None:
+    def _program_sequence(self, sequence: TimedInstruction) -> None:
         logger.debug("Programmed ni6738")
         values = np.concatenate(
             self._values_from_instruction(sequence), axis=1, dtype=np.float64
@@ -153,7 +153,7 @@ class NI6738AnalogCard(Sequencer, RuntimeDevice):
 
     @singledispatchmethod
     def _values_from_instruction(
-        self, instruction: SequencerInstruction
+        self, instruction: TimedInstruction
     ) -> list[np.ndarray]:
         raise NotImplementedError(
             f"Instruction with type {type(instruction)} is not supported"

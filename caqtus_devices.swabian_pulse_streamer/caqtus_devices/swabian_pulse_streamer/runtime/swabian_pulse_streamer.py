@@ -22,18 +22,18 @@ from caqtus.device.sequencer import (
     Sequencer,
     TimeStep,
 )
-from caqtus.device.sequencer.instructions import (
-    SequencerInstruction,
-    Pattern,
-    Concatenated,
-    Repeated,
-)
 from caqtus.device.sequencer.runtime import ProgrammedSequence, SequenceStatus
 from caqtus.device.sequencer.trigger import (
     Trigger,
     ExternalTriggerStart,
     TriggerEdge,
     SoftwareTrigger,
+)
+from caqtus.shot_compilation.timed_instructions import (
+    TimedInstruction,
+    Pattern,
+    Concatenated,
+    Repeated,
 )
 from caqtus.types.recoverable_exceptions import ConnectionFailedError
 
@@ -115,7 +115,7 @@ class SwabianPulseStreamer(Sequencer, RuntimeDevice):
             raise ValueError("Only supports software trigger.")
         self._pulse_streamer.setTrigger(start, TriggerRearm.MANUAL)
 
-    def program_sequence(self, sequence: SequencerInstruction) -> ProgrammedSequence:
+    def program_sequence(self, sequence: TimedInstruction) -> ProgrammedSequence:
         seq = self._construct_pulse_streamer_sequence(sequence)
         last_values = sequence[-1]
         enabled_output = [
@@ -129,7 +129,7 @@ class SwabianPulseStreamer(Sequencer, RuntimeDevice):
 
     @singledispatchmethod
     def _construct_pulse_streamer_sequence(
-        self, instruction: SequencerInstruction
+        self, instruction: TimedInstruction
     ) -> PulseStreamerSequence:
         raise NotImplementedError(
             f"Can't program instruction with type {type(instruction)}."

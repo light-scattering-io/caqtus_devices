@@ -13,14 +13,14 @@ from attrs.validators import instance_of
 
 from caqtus.device import RuntimeDevice
 from caqtus.device.sequencer import Sequencer, TimeStep
-from caqtus.device.sequencer.instructions import (
-    SequencerInstruction,
+from caqtus.device.sequencer.runtime import ProgrammedSequence, SequenceStatus
+from caqtus.device.sequencer.trigger import Trigger, SoftwareTrigger
+from caqtus.shot_compilation.timed_instructions import (
+    TimedInstruction,
     Pattern,
     Repeated,
     Concatenated,
 )
-from caqtus.device.sequencer.runtime import ProgrammedSequence, SequenceStatus
-from caqtus.device.sequencer.trigger import Trigger, SoftwareTrigger
 from caqtus.types.recoverable_exceptions import ConnectionFailedError
 from caqtus.utils import log_exception
 
@@ -123,7 +123,7 @@ class SpincorePulseBlaster(Sequencer, RuntimeDevice):
 
         self._spinapi.pb_core_clock(1e3 / self.clock_cycle)
 
-    def program_sequence(self, sequence: SequencerInstruction) -> ProgrammedSequence:
+    def program_sequence(self, sequence: TimedInstruction) -> ProgrammedSequence:
         spinapi = self._spinapi
         if spinapi.pb_start_programming(spinapi.PULSE_PROGRAM) != 0:
             raise RuntimeError(
@@ -141,7 +141,7 @@ class SpincorePulseBlaster(Sequencer, RuntimeDevice):
         return _ProgrammedSequence(spinapi)
 
     @singledispatchmethod
-    def _program_instruction(self, instruction: SequencerInstruction) -> int:
+    def _program_instruction(self, instruction: TimedInstruction) -> int:
         raise NotImplementedError(
             f"Can't program instruction with type {type(instruction)}"
         )
