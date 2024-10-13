@@ -18,8 +18,11 @@ dependencies = [
     "caqtus-suite>=6.9.0",
 ]
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/caqtus_devices"]
+
 [tool.hatch.version]
-path = "caqtus_devices/orca_quest/__about__.py"
+path = "src/caqtus_devices/orca_quest/__about__.py"
 
 [tool.hatch.envs.default]
 dependencies = [
