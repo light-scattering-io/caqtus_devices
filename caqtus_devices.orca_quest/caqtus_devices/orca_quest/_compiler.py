@@ -17,8 +17,14 @@ class OrcaQuestCompiler(CameraCompiler):
         self.configuration = configuration
         self.device_name = device_name
 
-    def compile_initialization_parameters(self):
-        return {
+    class InitializationParams(CameraCompiler.CameraInitializationParameters):
+        camera_number: int
+
+    def compile_initialization_parameters(self) -> InitializationParams:
+        return self.InitializationParams(
             **super().compile_initialization_parameters(),
-            DeviceParameter("camera_number"): self.configuration.camera_number,
-        }
+            camera_number=self.configuration.camera_number,
+        )
+        # params = super().compile_initialization_parameters()
+        # params["camera_number"] = self.configuration.camera_number
+        # return params

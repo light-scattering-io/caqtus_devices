@@ -4,11 +4,13 @@
 #
 # The declarations of classes and functions in this file are subject to change without notice.
 
-from .dcamapi4 import *
 import numpy as np
+
+from .dcamapi4 import *
 
 
 # ==== DCAMAPI helper functions ====
+
 
 def dcammisc_setupframe(hdcam, bufframe: DCAMBUF_FRAME):
     """
@@ -19,7 +21,7 @@ def dcammisc_setupframe(hdcam, bufframe: DCAMBUF_FRAME):
     idprop = DCAM_IDPROP.IMAGE_PIXELTYPE
     err = dcamprop_getvalue(hdcam, idprop, byref(fValue))
     if not err.is_failed():
-        bufframe.type = int(fValue.value)
+        bufframe.type = int(fValue.value)  # type: ignore[reportAttributeAccessIssue]
 
         idprop = DCAM_IDPROP.IMAGE_WIDTH
         err = dcamprop_getvalue(hdcam, idprop, byref(fValue))
@@ -46,10 +48,10 @@ def dcammisc_alloc_ndarray(frame: DCAMBUF_FRAME):
     """
 
     if frame.type == DCAM_PIXELTYPE.MONO16:
-        return np.zeros((frame.height, frame.width), dtype='uint16')
+        return np.zeros((frame.height, frame.width), dtype="uint16")
 
     if frame.type == DCAM_PIXELTYPE.MONO8:
-        return np.zeros((frame.height, frame.width), dtype='uint8')
+        return np.zeros((frame.height, frame.width), dtype="uint8")
 
     return False
 
@@ -60,7 +62,9 @@ def dcammisc_alloc_ndarray(frame: DCAMBUF_FRAME):
 class Dcamapi:
     # class instance
     __lasterr = DCAMERR.SUCCESS  # the last error from functions with dcamapi_ prefix.
-    __bInitialized = False  # Once Dcamapi.init() is called, then True.  Dcamapi.uninit() reset this.
+    __bInitialized = (
+        False  # Once Dcamapi.init() is called, then True.  Dcamapi.uninit() reset this.
+    )
     __devicecount = 0
 
     @classmethod
@@ -93,7 +97,9 @@ class Dcamapi:
             False:  if dcamapi_init() returned DCAMERR except SUCCESS.  lasterr() returns the DCAMERR value.
         """
         if cls.__bInitialized:
-            return cls.__result(DCAMERR.ALREADYINITIALIZED)  # dcamapi_init() is called. New Error.
+            return cls.__result(
+                DCAMERR.ALREADYINITIALIZED
+            )  # dcamapi_init() is called. New Error.
 
         paraminit = DCAMAPI_INIT()
         err = dcamapi_init(byref(paraminit))
@@ -135,6 +141,7 @@ class Dcamapi:
 
         return cls.__devicecount
 
+
 # ==== Dcam class ====
 
 
@@ -147,7 +154,7 @@ class Dcam:
         self.__bufframe = DCAMBUF_FRAME()
 
     def __repr__(self):
-        return 'Dcam()'
+        return "Dcam()"
 
     def __result(self, errvalue):
         """
@@ -191,7 +198,9 @@ class Dcam:
             False:  if dcamdev_open() returned DCAMERR except SUCCESS.  lasterr() returns the DCAMERR value.
         """
         if self.is_opened():
-            return self.__result(DCAMERR.ALREADYOPENED)  # instance is already opened. New Error.
+            return self.__result(
+                DCAMERR.ALREADYOPENED
+            )  # instance is already opened. New Error.
 
         paramopen = DCAMDEV_OPEN()
         if index >= 0:
@@ -246,7 +255,7 @@ class Dcam:
         if ret is False:
             return False
 
-        return paramdevstr.text.decode()
+        return paramdevstr.text.decode()  # type: ignore[reportAttributeAccessIssue]
 
     # dcamprop functions
 
@@ -331,7 +340,9 @@ class Dcam:
 
         cDouble = c_double(fValue)
         cOption = c_int32(option)
-        ret = self.__result(dcamprop_setgetvalue(self.__hdcam, idprop, byref(cDouble), cOption))
+        ret = self.__result(
+            dcamprop_setgetvalue(self.__hdcam, idprop, byref(cDouble), cOption)
+        )
         if ret is False:
             return False
 
@@ -354,7 +365,9 @@ class Dcam:
 
         cDouble = c_double(fValue)
         cOption = c_int32(option)
-        ret = self.__result(dcamprop_queryvalue(self.__hdcam, idprop, byref(cDouble), cOption))
+        ret = self.__result(
+            dcamprop_queryvalue(self.__hdcam, idprop, byref(cDouble), cOption)
+        )
         if ret is False:
             return False
 
@@ -398,7 +411,9 @@ class Dcam:
             return self.__result(DCAMERR.INVALIDHANDLE)  # instance is not opened yet.
 
         textbuf = create_string_buffer(256)
-        ret = self.__result(dcamprop_getname(self.__hdcam, idprop, textbuf, sizeof(textbuf)))
+        ret = self.__result(
+            dcamprop_getname(self.__hdcam, idprop, textbuf, sizeof(textbuf))
+        )
         if ret is False:
             return False
 
@@ -428,7 +443,7 @@ class Dcam:
         if ret is False:
             return False
 
-        return paramvaluetext.text.decode()
+        return paramvaluetext.text.decode()  # type: ignore[reportAttributeAccessIssue]
 
     # dcambuf functions
 
@@ -488,7 +503,9 @@ class Dcam:
         aFrame = DCAMBUF_FRAME()
         aFrame.iFrame = iFrame
 
-        aFrame.buf = npBuf.ctypes.data_as(c_void_p)
+        aFrame.buf = (  # pyright: ignore[reportAttributeAccessIssue]
+            npBuf.ctypes.data_as(c_void_p)
+        )
         aFrame.rowbytes = self.__bufframe.rowbytes
         aFrame.type = self.__bufframe.type
         aFrame.width = self.__bufframe.width
@@ -515,7 +532,7 @@ class Dcam:
         if ret is False:
             return False
 
-        return ret[1]
+        return ret[1]  # type: ignore[reportIndexIssue]
 
     def buf_getlastframedata(self):
         """
@@ -606,7 +623,9 @@ class Dcam:
             return self.__result(DCAMERR.INVALIDHANDLE)  # instance is not opened yet.
 
         paramtransferinfo = DCAMCAP_TRANSFERINFO()
-        ret = self.__result(dcamcap_transferinfo(self.__hdcam, byref(paramtransferinfo)))
+        ret = self.__result(
+            dcamcap_transferinfo(self.__hdcam, byref(paramtransferinfo))
+        )
         if ret is False:
             return False
 
@@ -629,7 +648,6 @@ class Dcam:
             return False
 
         return True
-
 
     # dcamwait functions
 
@@ -710,5 +728,3 @@ class Dcam:
         # ret is DCAMWAIT_CAPEVENT.FRAMEREADY
 
         return True
-
-

@@ -6,12 +6,12 @@ from typing import Any, ClassVar, Optional, Self
 from attrs import define, field
 from attrs.setters import frozen
 from attrs.validators import instance_of
+
 from caqtus.device.camera import Camera, CameraTimeoutError
 from caqtus.types.image import Image
 from caqtus.types.recoverable_exceptions import ConnectionFailedError
 from caqtus.utils import log_exception
 from caqtus.utils.context_managers import close_on_error
-
 from . import dcam, dcamapi4
 
 logger = logging.getLogger(__name__)
@@ -37,7 +37,7 @@ class OrcaQuestCamera(Camera):
 
     _camera: "dcam.Dcam" = field(init=False)
     _buffer_number_pictures: Optional[int] = field(init=False, default=None)
-    _exit_stack = field(init=False, factory=contextlib.ExitStack)
+    _exit_stack: contextlib.ExitStack = field(init=False, factory=contextlib.ExitStack)
 
     def _read_last_error(self) -> str:
         return dcam.DCAMERR(self._camera.lasterr()).name
@@ -181,7 +181,12 @@ class OrcaQuestCamera(Camera):
         while True:
             if self._camera.wait_capevent_frameready(1):
                 image = self._camera.buf_getframedata(frame)
-                return image.T
+                if image:
+                    return image.T
+                else:
+                    raise RuntimeError(
+                        f"Failed to get image data: {self._camera.lasterr()}"
+                    )
             error = self._camera.lasterr()
             if error.is_timeout():
                 elapsed = time.monotonic() - start_acquire
