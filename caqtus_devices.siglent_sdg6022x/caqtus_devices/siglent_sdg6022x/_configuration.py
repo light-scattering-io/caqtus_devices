@@ -4,16 +4,16 @@ from typing import Literal, Self, Optional
 
 import attrs
 import cattrs.strategies
+
 from caqtus.device import DeviceConfiguration
 from caqtus.device.output_transform import (
     EvaluableOutput,
     converter,
     structure_evaluable_output,
 )
-from caqtus.device.output_transform.transformation import evaluable_output_validator
+from caqtus.device.output_transform import evaluable_output_validator
 from caqtus.types.expression import Expression
 from caqtus.utils import serialization
-
 from ._runtime import SiglentSDG6022X
 
 
