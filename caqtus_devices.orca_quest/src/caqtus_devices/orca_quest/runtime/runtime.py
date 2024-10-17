@@ -181,7 +181,7 @@ class OrcaQuestCamera(Camera):
         while True:
             if self._camera.wait_capevent_frameready(1):
                 image = self._camera.buf_getframedata(frame)
-                if image:
+                if image is not None:
                     return image.T
                 else:
                     raise RuntimeError(
