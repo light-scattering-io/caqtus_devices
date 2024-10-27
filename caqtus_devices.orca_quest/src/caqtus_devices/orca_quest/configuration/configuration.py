@@ -21,9 +21,13 @@ class OrcaQuestCameraConfiguration(CameraConfiguration["OrcaQuestCamera"]):
 
     Attributes:
         camera_number: The number of the camera to use.
+        roi: The region of interest to capture from the camera.
     """
 
     camera_number: int = attrs.field(converter=int, on_setattr=attrs.setters.convert)
+    # We redefine the roi attribute here so that it appears below the camera number in
+    # the editor.
+    roi = CameraConfiguration.roi
 
     @classmethod
     def dump(cls, config: OrcaQuestCameraConfiguration) -> serialization.JSON:

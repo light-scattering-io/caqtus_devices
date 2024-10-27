@@ -15,7 +15,7 @@ authors = [
 ]
 
 dependencies = [
-    "caqtus-suite>=6.9.0",
+    "caqtus-suite>=6.14.0",
 ]
 
 [tool.hatch.build.targets.wheel]
