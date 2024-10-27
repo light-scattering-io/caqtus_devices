@@ -6,11 +6,8 @@ import attrs
 import cattrs.strategies
 
 from caqtus.device import DeviceConfiguration
-from caqtus.device.output_transform import (
-    EvaluableOutput,
-    converter,
-    structure_evaluable_output,
-)
+from caqtus.device.configuration import get_converter
+from caqtus.device.output_transform import EvaluableOutput
 from caqtus.device.output_transform import evaluable_output_validator
 from caqtus.types.expression import Expression
 from caqtus.utils import serialization
@@ -118,7 +115,7 @@ def structure_siglent_configuration(data, _):
     )
 
 
-_converter = converter
+_converter = get_converter()
 
 
 def unstructure_channel_configuration(obj: ChannelConfiguration) -> serialization.JSON:
@@ -166,9 +163,9 @@ def structure_sine_wave_output(data: serialization.JSON, _):
     return SineWaveOutput(
         output_enabled=_converter.structure(data["output_enabled"], bool),
         load=_converter.structure(data["load"], float | Literal["High Z"]),
-        frequency=structure_evaluable_output(data["frequency"], EvaluableOutput),
-        amplitude=structure_evaluable_output(data["amplitude"], EvaluableOutput),
-        offset=structure_evaluable_output(data["offset"], EvaluableOutput),
+        frequency=_converter.structure(data["frequency"], EvaluableOutput),
+        amplitude=_converter.structure(data["amplitude"], EvaluableOutput),
+        offset=_converter.structure(data["offset"], EvaluableOutput),
         modulation=_converter.structure(data.get("modulation"), Optional[Modulation]),
     )
 
