@@ -1,12 +1,12 @@
 from caqtus.device.sequencer import SequencerController, SequencerProxy
 from caqtus.extension import DeviceExtension
 
-from .._compiler import SpincoreSequencerCompiler
-from ..configuration import SpincoreSequencerConfiguration
-from ..configuration_editor import SpincorePulseBlasterDeviceConfigEditor
-from ..runtime import SpincorePulseBlaster
+from ._compiler import SpincoreSequencerCompiler
+from .configuration import SpincoreSequencerConfiguration
+from .configuration_editor import SpincorePulseBlasterDeviceConfigEditor
+from .runtime import SpincorePulseBlaster
 
-spincore_pulse_blaster_extension = DeviceExtension(
+extension = DeviceExtension(
     label="SpinCore PulseBlaster",
     device_type=SpincorePulseBlaster,
     configuration_type=SpincoreSequencerConfiguration,
@@ -19,4 +19,4 @@ spincore_pulse_blaster_extension = DeviceExtension(
     proxy_type=SequencerProxy,
 )
 
-__all__ = ["spincore_pulse_blaster_extension"]
+__all__ = ["extension"]
