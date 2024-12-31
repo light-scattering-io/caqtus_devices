@@ -2,9 +2,10 @@ from typing import Optional
 
 from caqtus.device.output_transform import EvaluableOutput
 from caqtus.types.expression import Expression
-
-from caqtus_devices.siglent_sdg6022x import SiglentSDG6022XConfiguration
-from caqtus_devices.siglent_sdg6022x._configuration import (
+from caqtus_devices.arbitrary_waveform_generators.siglent_sdg6000x import (
+    SiglentSDG6022XConfiguration,
+)
+from caqtus_devices.arbitrary_waveform_generators.siglent_sdg6000x._configuration import (
     ChannelConfiguration,
     SineWaveOutput,
     _converter,

@@ -1,7 +1,11 @@
 from pytestqt.qtbot import QtBot
 
-from caqtus_devices.siglent_sdg6022x._configuration import SiglentSDG6022XConfiguration
-from caqtus_devices.siglent_sdg6022x._editor import SiglentSDG6022XConfigEditor
+from caqtus_devices.arbitrary_waveform_generators.siglent_sdg6000x import (
+    SiglentSDG6022XConfiguration,
+)
+from caqtus_devices.arbitrary_waveform_generators.siglent_sdg6000x._editor import (
+    SiglentSDG6022XConfigEditor,
+)
 
 
 def test_0(qtbot: QtBot):
