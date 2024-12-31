@@ -1,17 +1,15 @@
-[tool.poetry]
+[project]
 name = "caqtus-devices-imaging-source"
-version = "1.9.0"
-description = ""
-authors = ["Dear <lechadoq@gmail.com>"]
+version = "1.10.0"
+description = "Add your description here"
+authors = ["<lecaqtus66@gmail.com>"]
 readme = "README.md"
-packages = [{include = "caqtus_devices"}]
-
-[tool.poetry.dependencies]
-python = "^3.12, <3.13"
-
-caqtus-suite = ">=6.9.0"
-
+requires-python = ">=3.12"
+dependencies = [
+    "caqtus-suite>=6.18.1",
+    "pyside6>=6.8.1,!=6.8.1.1",
+]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"

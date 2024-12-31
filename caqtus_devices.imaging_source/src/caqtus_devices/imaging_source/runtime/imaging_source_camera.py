@@ -1,11 +1,4 @@
-"""This module provide a class to use an Imaging Source camera.
-
-Note that to import this package, the library tisgrabber_x64.dll must be installed.
-The library can be downloaded from the Imaging Source website.
-In the download page (https://www.theimagingsource.com/en-us/support/download/),
-section SDK, install the IC Imaging Control C Library if you are using Windows.
-Untested on other platforms.
-"""
+"""This module provide a class to use an Imaging Source camera."""
 
 import contextlib
 import ctypes
@@ -28,7 +21,6 @@ from . import tisgrabber as tis
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-# Edit this path if the library is installed in a different location
 tisgrabber_path = (
     os.path.expanduser("~")
     + r"\Documents\The Imaging Source Europe GmbH\TIS Grabber DLL\bin\x64\tisgrabber_x64.dll"
