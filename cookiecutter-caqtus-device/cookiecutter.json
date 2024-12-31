@@ -1,0 +1,13 @@
+{
+  "device_category": ["Camera", "AWG", "Pulse generator"],
+  "manufacturer": "manufacturer",
+  "device_label": "device123",
+  "device_type": "{{ cookiecutter.device_ca
+  "device_type_slug": "{{ cookiecutter.device_type.lower().replace(' ', '_') }}",
+  "project_name": "caqtus_devices.{{ cookiecutter.device_type_slug }}",
+  "project_slug": "{{ cookiecutter.project_name.lower().replace(' ', '_') }}",
+  "version": "0.1.0",
+  "description": "Contains extension code for caqtus framework for device {{ cookiecutter.device_type }}",
+  "author_name": "light-scattering-io",
+  "author_email": "lecaqtus66@gmail.com"
+}
