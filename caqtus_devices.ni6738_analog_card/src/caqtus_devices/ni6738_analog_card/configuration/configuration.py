@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import decimal
 from typing import ClassVar, Type
 
 import attrs
@@ -12,6 +11,7 @@ from caqtus.device.sequencer import (
 )
 from caqtus.device.sequencer import converter
 from caqtus.device.sequencer.channel_commands import Constant
+from caqtus.device.sequencer.timing import to_time_step
 from caqtus.device.sequencer.trigger import SoftwareTrigger
 from caqtus.types.expression import Expression
 from ..runtime import NI6738AnalogCard
@@ -33,9 +33,9 @@ class NI6738SequencerConfiguration(SequencerConfiguration[NI6738AnalogCard]):
         on_setattr=attrs.setters.pipe(attrs.setters.convert, attrs.setters.validate),
     )
     time_step: TimeStep = attrs.field(
-        default=decimal.Decimal(2500),
-        converter=decimal.Decimal,
-        validator=attrs.validators.ge(decimal.Decimal(2500)),
+        default=to_time_step(2500),
+        converter=to_time_step,
+        validator=attrs.validators.ge(to_time_step(2500)),
         on_setattr=attrs.setters.pipe(attrs.setters.convert, attrs.setters.validate),
     )
 

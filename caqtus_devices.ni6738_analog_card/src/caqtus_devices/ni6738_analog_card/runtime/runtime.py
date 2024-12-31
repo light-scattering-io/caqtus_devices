@@ -1,5 +1,4 @@
 import contextlib
-import decimal
 import logging
 from contextlib import closing
 from functools import singledispatchmethod
@@ -13,7 +12,7 @@ import nidaqmx.system
 import numpy
 import numpy as np
 from attrs.setters import frozen
-from attrs.validators import instance_of, ge
+from attrs.validators import ge
 
 from caqtus.device import RuntimeDevice
 from caqtus.device.sequencer import (
@@ -21,7 +20,7 @@ from caqtus.device.sequencer import (
     TimeStep,
 )
 from caqtus.device.sequencer.runtime import ProgrammedSequence, SequenceStatus
-from caqtus.device.sequencer.timing import ns
+from caqtus.device.sequencer.timing import ns, to_time_step
 from caqtus.device.sequencer.trigger import (
     Trigger,
     ExternalClockOnChange,
@@ -67,12 +66,15 @@ class NI6738AnalogCard(Sequencer, RuntimeDevice):
     channel_number: ClassVar[int] = 32
 
     time_step: TimeStep = attrs.field(
-        converter=decimal.Decimal,
-        validator=ge(decimal.Decimal(2500)),
+        validator=ge(to_time_step(2500)),
         on_setattr=frozen,
     )
-    device_id: str = attrs.field(validator=instance_of(str), on_setattr=frozen)
-    trigger: Trigger = attrs.field(validator=instance_of(Trigger), on_setattr=frozen)
+    device_id: str = attrs.field(
+        validator=attrs.validators.instance_of(str), on_setattr=frozen
+    )
+    trigger: Trigger = attrs.field(
+        validator=attrs.validators.instance_of(Trigger), on_setattr=frozen
+    )
 
     _task: nidaqmx.Task = attrs.field(init=False)
 
