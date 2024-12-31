@@ -4,7 +4,7 @@ Readme
 Installation
 ------------
 
-The following python package must be installed from PyPI: `caqtus_devices.imaging_source`.
+The following python package must be installed from PyPI: `caqtus-devices-imaging-source`.
 
 In addition, to use this package to talk to a camera, the library tisgrabber must be 
 installed.
