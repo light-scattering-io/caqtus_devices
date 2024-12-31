@@ -15,7 +15,7 @@ def create_orca_quest_device(*args, **kwargs):
     return OrcaQuestCamera(*args, **kwargs)
 
 
-orca_quest_extension = DeviceExtension(
+extension = DeviceExtension(
     label="Orca Quest camera",
     device_type=create_orca_quest_device,
     configuration_type=OrcaQuestCameraConfiguration,
