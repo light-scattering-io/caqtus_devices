@@ -1,10 +1,11 @@
 [project]
 name = "caqtus-devices-imaging-source"
 version = "1.10.0"
-description = "Add your description here"
+description = "Contains the caqtus device extension for the Imaging Source cameras."
 authors = [
     { name = "light-scattering-io", email = "lecaqtus66@gmail.com" },
 ]
+license = { file = "license.md" }
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
