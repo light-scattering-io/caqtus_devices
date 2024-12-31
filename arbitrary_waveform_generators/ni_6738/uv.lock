@@ -70,7 +70,7 @@ wheels = [
 ]
 
 [[package]]
-name = "caqtus-devices-ni6738-analog-card"
+name = "caqtus-devices-ni-6738"
 version = "1.13.0"
 source = { editable = "." }
 dependencies = [
