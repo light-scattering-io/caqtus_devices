@@ -1,7 +1,7 @@
 [project]
-name = "caqtus-devices-imaging-source"
+name = "caqtus-devices-imaging-source-dmk33gr0134"
 version = "1.10.0"
-description = "Contains the caqtus device extension for the Imaging Source cameras."
+description = "Contains the caqtus device extension for the Imaging Source camera DMK 33GR0134."
 authors = [
     { name = "light-scattering-io", email = "lecaqtus66@gmail.com" },
 ]

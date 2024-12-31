@@ -12,7 +12,7 @@ def create_new_imaging_source_camera(*args, **kwargs):
     return ImagingSourceCameraDMK33GR0134(*args, **kwargs)
 
 
-imaging_source_extension = DeviceExtension(
+extension = DeviceExtension(
     label="Imaging Source camera",
     device_type=create_new_imaging_source_camera,
     configuration_type=ImagingSourceCameraConfiguration,
