@@ -1,0 +1,28 @@
+[project]
+name = "caqtus-devices-swabian-instruments-pulse-streamer"
+version = "1.16.0"
+description = "Contains the caqtus device extension for the Swabian instruments Pulse Streamer."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { file = "license.md" }
+authors = [
+    { name = "light-scattering-io", email = "lecaqtus66@gmail.com" },
+]
+dependencies = [
+    "caqtus-suite>=6.18.1",
+    "pulsestreamer>=1.7.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/caqtus_devices"]
+
+[tool.uv]
+dev-dependencies = [
+    "pyright>=1.1.391",
+    "pytest>=8.3.4",
+    "ruff>=0.8.4",
+]

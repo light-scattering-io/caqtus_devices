@@ -6,7 +6,7 @@ from .configuration import SwabianPulseStreamerConfiguration
 from .configuration_editor import SwabianPulseStreamerDeviceConfigEditor
 from .runtime import SwabianPulseStreamer
 
-swabian_pulse_streamer_extension = DeviceExtension(
+extension = DeviceExtension(
     label="Swabian Pulse Streamer",
     device_type=SwabianPulseStreamer,
     configuration_type=SwabianPulseStreamerConfiguration,
