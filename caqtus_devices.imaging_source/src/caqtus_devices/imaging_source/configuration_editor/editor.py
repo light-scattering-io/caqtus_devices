@@ -29,5 +29,7 @@ class ImagingSourceCameraConfigurationEditor(
     def get_configuration(self) -> ImagingSourceCameraConfiguration:
         configuration = super().get_configuration()
         configuration.camera_name = self._camera_name.text()
-        configuration.format = self._format_combo_box.currentText()
+        format_ = self._format_combo_box.currentText()
+        assert format_ == "Y800" or format_ == "Y16"
+        configuration.format = format_
         return configuration

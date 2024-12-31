@@ -59,8 +59,10 @@ class ImagingSourceCameraDMK33GR0134(Camera):
         validator=attrs.validators.in_(["Y16", "Y800"]), on_setattr=attrs.setters.frozen
     )
 
-    _grabber_handle: ctypes.POINTER(tis.HGRABBER) = attrs.field(init=False)
-    _close_stack = attrs.field(init=False, factory=contextlib.ExitStack)
+    _grabber_handle = attrs.field(init=False)
+    _close_stack: contextlib.ExitStack = attrs.field(
+        init=False, factory=contextlib.ExitStack
+    )
 
     @classmethod
     def get_device_names(cls) -> list[str]:
@@ -110,7 +112,7 @@ class ImagingSourceCameraDMK33GR0134(Camera):
 
     def _stop_live(self) -> None:
         if not ic.IC_StopLive(self._grabber_handle):
-            raise RuntimeError(f"Failed to stop live")
+            raise RuntimeError("Failed to stop live")
 
     def update_parameters(self, timeout: float) -> None:
         self.timeout = timeout
@@ -137,7 +139,7 @@ class ImagingSourceCameraDMK33GR0134(Camera):
 
     def _set_format(self, format_: Literal["Y16", "Y800"]):
         if not ic.IC_SetFormat(self._grabber_handle, _MAP_FORMAT[format_]):
-            raise RuntimeError(f"Failed to set format")
+            raise RuntimeError("Failed to set format")
 
     def _set_exposure(self, exposure: float):
         ic.IC_SetPropertyAbsoluteValue(
@@ -151,7 +153,7 @@ class ImagingSourceCameraDMK33GR0134(Camera):
         timeout = int(self.timeout * 1e3)
         result = ic.IC_SnapImage(self._grabber_handle, timeout)
         if result != tis.IC_SUCCESS:
-            raise CameraTimeoutError(f"Failed to acquire picture")
+            raise CameraTimeoutError("Failed to acquire picture")
 
     def _read_picture_from_camera(self) -> numpy.ndarray:
         width = ctypes.c_long()

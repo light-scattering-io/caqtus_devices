@@ -1,6 +1,4 @@
-from typing import Mapping, Any
-
-from caqtus.device import DeviceName, DeviceParameter
+from caqtus.device import DeviceName
 from caqtus.device.camera import CameraCompiler
 from caqtus.shot_compilation import SequenceContext
 
@@ -19,9 +17,13 @@ class ImagingSourceCameraCompiler(CameraCompiler):
         self.configuration = configuration
         self.device_name = device_name
 
-    def compile_initialization_parameters(self) -> Mapping[DeviceParameter, Any]:
-        return {
+    class InitParams(CameraCompiler.CameraInitializationParameters):
+        camera_name: str
+        format: str
+
+    def compile_initialization_parameters(self) -> InitParams:
+        return self.InitParams(
             **super().compile_initialization_parameters(),
-            DeviceParameter("camera_name"): self.configuration.camera_name,
-            DeviceParameter("format"): self.configuration.format,
-        }
+            camera_name=self.configuration.camera_name,
+            format=self.configuration.format,
+        )

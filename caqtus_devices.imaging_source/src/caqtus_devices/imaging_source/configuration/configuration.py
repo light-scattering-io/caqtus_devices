@@ -3,14 +3,14 @@ from __future__ import annotations
 from typing import Literal, TYPE_CHECKING
 
 import attrs
+
 from caqtus.device.camera import CameraConfiguration
 from caqtus.types.image import Width, Height
 from caqtus.types.image.roi import RectangularROI
 from caqtus.utils import serialization
 
 if TYPE_CHECKING:
-    # noinspection PyUnresolvedReferences
-    from ..runtime import ImagingSourceCameraDMK33GR0134
+    from ..runtime import ImagingSourceCameraDMK33GR0134  # noqa: F401
 
 
 @attrs.define
