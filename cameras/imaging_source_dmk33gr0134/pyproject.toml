@@ -1,6 +1,6 @@
 [project]
 name = "caqtus-devices-imaging-source-dmk33gr0134"
-version = "1.10.0"
+version = "1.11.0"
 description = "Contains the caqtus device extension for the Imaging Source camera DMK 33GR0134."
 authors = [
     { name = "light-scattering-io", email = "lecaqtus66@gmail.com" },
@@ -9,8 +9,7 @@ license = { file = "license.md" }
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "caqtus-suite>=6.18.1",
-    "pyside6>=6.8.1,!=6.8.1.1",
+    "caqtus-suite>=6.20",
 ]
 
 [build-system]
@@ -23,6 +22,8 @@ packages = ["src/caqtus_devices"]
 [tool.uv]
 dev-dependencies = [
     "pyright>=1.1.391",
+    "pytest-qt>=4.4.0",
+    "pytest>=8.3.4",
     "ruff>=0.8.4",
 ]
 
