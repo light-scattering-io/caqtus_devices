@@ -1,6 +1,6 @@
 [project]
 name = "caqtus-devices-hamamatsu-orca-quest"
-version = "2.5.4"
+version = "2.5.5"
 description = "Contains the caqtus device extension for the Hamamatsu Orca Quest camera."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -9,7 +9,7 @@ authors = [
     { name = "light-scattering-io", email = "lecaqtus66@gmail.com" },
 ]
 dependencies = [
-    "caqtus-suite>=6.18.1",
+    "caqtus-suite>=6.20.0",
 ]
 
 [build-system]
