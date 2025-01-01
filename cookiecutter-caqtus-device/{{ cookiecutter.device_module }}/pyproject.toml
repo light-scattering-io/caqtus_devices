@@ -1,5 +1,5 @@
 [project]
-name = "{{ cookiecutter.project_slug.replace('_', '-').replace('.', '-') }}"
+name = "caqtus-devices-{{ cookiecutter.device_module.replace('_', '-').replace('.', '-') }}"
 version = "{{ cookiecutter.version }}"
 description = "{{ cookiecutter.description }}"
 authors = [
@@ -10,7 +10,6 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "caqtus-suite>=6.18.1",
-    "pyside6>=6.8.1,!=6.8.1.1",
 ]
 
 [build-system]

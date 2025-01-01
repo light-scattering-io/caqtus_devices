@@ -1,13 +1,20 @@
 {
-  "device_category": ["Camera", "AWG", "Pulse generator"],
+  "device_category": [
+    "camera",
+    "arbitrary waveform generator",
+    "pulse generator",
+    "motorized stage"
+  ],
+  "device_category_module": "{{ cookiecutter.device_category.lower().replace(' ', '_') + 's' }}",
   "manufacturer": "manufacturer",
   "device_label": "device123",
-  "device_type": "{{ cookiecutter.device_ca
-  "device_type_slug": "{{ cookiecutter.device_type.lower().replace(' ', '_') }}",
-  "project_name": "caqtus_devices.{{ cookiecutter.device_type_slug }}",
-  "project_slug": "{{ cookiecutter.project_name.lower().replace(' ', '_') }}",
+  "device_type": "{{ cookiecutter.manufacturer }} {{ cookiecutter.device_label }}",
+  "device_module": "{{ cookiecutter.device_type.lower().replace(' ', '_') }}",
+  "package_name": "caqtus_devices.{{ cookiecutter.device_category_module }}.{{ cookiecutter.device_module }}",
+  "pypi_name": "caqtus-devices-{{ cookiecutter.device_module.replace('_', '-').replace('.', '-') }}",
+  "project_slug": "{{ cookiecutter.package_name.replace(' ', '_') }}",
   "version": "0.1.0",
-  "description": "Contains extension code for caqtus framework for device {{ cookiecutter.device_type }}",
+  "description": "Contains extension code for caqtus framework for {{ cookiecutter.device_category}} {{ cookiecutter.device_type }}",
   "author_name": "light-scattering-io",
   "author_email": "lecaqtus66@gmail.com"
 }
