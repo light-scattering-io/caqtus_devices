@@ -13,7 +13,7 @@ from caqtus.utils import log_exception
 from caqtus.utils.context_managers import close_on_error
 from . import dcam, dcamapi4
 
-logger = logging.getLogger(__name__)
+
 
 BUFFER_SIZE = 10
 
