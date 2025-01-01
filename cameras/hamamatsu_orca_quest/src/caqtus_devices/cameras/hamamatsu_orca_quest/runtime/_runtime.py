@@ -1,5 +1,4 @@
 import contextlib
-import logging
 import time
 from typing import Any, ClassVar, Optional, Self
 
@@ -12,8 +11,7 @@ from caqtus.types.recoverable_exceptions import ConnectionFailedError
 from caqtus.utils import log_exception
 from caqtus.utils.context_managers import close_on_error
 from . import dcam, dcamapi4
-
-
+from ._logger import logger
 
 BUFFER_SIZE = 10
 
@@ -133,6 +131,9 @@ class OrcaQuestCamera(Camera):
             )
         self._exit_stack.callback(self._camera.buf_release)
 
+        for property_name, value in self.list_properties().items():
+            logger.debug("Property %s: %f", property_name, value)
+
     @contextlib.contextmanager
     def acquire(self, exposures: list[float]):
         if len(exposures) > BUFFER_SIZE:
@@ -204,14 +205,31 @@ class OrcaQuestCamera(Camera):
                 else:
                     raise RuntimeError(f"An error occurred during acquisition: {error}")
 
-    def list_properties(self) -> list:
-        result = []
+    def list_properties(self) -> dict[str, float]:
+        result = {}
         property_id = self._camera.prop_getnextid(0)
         while property_id:
             property_name = self._camera.prop_getname(property_id)
             if property_name:
-                result.append((property_id, property_name))
+                value = self._camera.prop_getvalue(property_id)
+                if value is not False:
+                    result[property_name] = value
+                else:
+                    raise RuntimeError(
+                        f"Failed to get property value for {property_name}:"
+                        f" {self._camera.lasterr()}"
+                    )
+            else:
+                raise RuntimeError(
+                    f"Failed to get property name for {property_id}:"
+                    f" {self._camera.lasterr()}"
+                )
             property_id = self._camera.prop_getnextid(property_id)
+            if property_id is False:
+                raise RuntimeError(
+                    f"Failed to get next property id after {property_id}:"
+                    f" {self._camera.lasterr()}"
+                )
         return result
 
     @classmethod
