@@ -1,4 +1,5 @@
 import contextlib
+import logging
 import time
 from typing import Any, ClassVar, Optional, Self
 
@@ -131,8 +132,9 @@ class OrcaQuestCamera(Camera):
             )
         self._exit_stack.callback(self._camera.buf_release)
 
-        for property_name, value in self.list_properties().items():
-            logger.debug("Property %s: %f", property_name, value)
+        if logger.level <= logging.DEBUG:
+            for property_name, value in self.list_properties().items():
+                logger.debug("Property %s: %f", property_name, value)
 
     @contextlib.contextmanager
     def acquire(self, exposures: list[float]):
@@ -208,7 +210,7 @@ class OrcaQuestCamera(Camera):
     def list_properties(self) -> dict[str, float]:
         result = {}
         property_id = self._camera.prop_getnextid(0)
-        while property_id:
+        while True:
             property_name = self._camera.prop_getname(property_id)
             if property_name:
                 value = self._camera.prop_getvalue(property_id)
@@ -225,11 +227,15 @@ class OrcaQuestCamera(Camera):
                     f" {self._camera.lasterr()}"
                 )
             property_id = self._camera.prop_getnextid(property_id)
-            if property_id is False:
-                raise RuntimeError(
-                    f"Failed to get next property id after {property_id}:"
-                    f" {self._camera.lasterr()}"
-                )
+            if not property_id:
+                last_error = self._camera.lasterr()
+                if last_error == dcam.DCAMERR.NOPROPERTY:
+                    break
+                else:
+                    raise RuntimeError(
+                        f"Failed to get next property id after {property_id}:"
+                        f" {last_error}"
+                    )
         return result
 
     @classmethod
