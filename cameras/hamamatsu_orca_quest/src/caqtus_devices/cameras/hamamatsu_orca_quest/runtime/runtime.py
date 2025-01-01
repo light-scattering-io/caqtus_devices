@@ -8,7 +8,6 @@ from attrs.setters import frozen
 from attrs.validators import instance_of
 
 from caqtus.device.camera import Camera, CameraTimeoutError
-from caqtus.types.image import Image
 from caqtus.types.recoverable_exceptions import ConnectionFailedError
 from caqtus.utils import log_exception
 from caqtus.utils.context_managers import close_on_error
@@ -67,9 +66,7 @@ class OrcaQuestCamera(Camera):
         if self.camera_number < dcam.Dcamapi.get_devicecount():
             self._camera = dcam.Dcam(self.camera_number)
         else:
-            raise ConnectionFailedError(
-                f"Could not find camera {str(self.camera_number)}"
-            )
+            raise ConnectionFailedError(f"Could not find camera {self.camera_number}")
 
         if not self._camera.dev_open():
             raise ConnectionFailedError(
@@ -159,12 +156,53 @@ class OrcaQuestCamera(Camera):
 
     def _read_images(self, exposures: list[float]):
         # Should change the exposure time if using internal trigger, but don't need to
-        # do it know as we only support external trigger.
+        # do it now as we only support external trigger.
         # self._camera.prop_setvalue(DCAM_IDPROP.EXPOSURETIME, new_exposure)
 
-        for frame, _ in enumerate(exposures):
-            image = self._acquire_picture(frame)
-            yield image
+        acquisition_start_time = time.monotonic()
+        next_frame = 0
+
+        while next_frame < len(exposures):
+            # wait_capevent_frameready will only wait 50 ms if not acquisition occurred
+            # in that time.
+            # If a picture is available before, it will return at that moment, so it
+            # should be reactive.
+            if self._camera.wait_capevent_frameready(50):
+                # More than one picture might have been acquired since the last
+                # wait_capevent_frameready, so we need to handle possibly multiple
+                # pictures.
+                transfer_info = self._camera.cap_transferinfo()
+                if not transfer_info:
+                    raise RuntimeError(
+                        f"Failed to get capture transfer info: {self._camera.lasterr()}"
+                    )
+                for frame in range(
+                    next_frame, int(transfer_info.nNewestFrameIndex) + 1
+                ):
+                    logger.debug("Reading frame %d", frame)
+                    image = self._camera.buf_getframedata(frame)
+                    if image is not None:
+                        yield image.T
+                    else:
+                        raise RuntimeError(
+                            f"Failed to get image data: {self._camera.lasterr()}"
+                        )
+                next_frame = int(transfer_info.nNewestFrameIndex) + 1
+            else:
+                error = self._camera.lasterr()
+                if error.is_timeout():
+                    # elapsed refer to beginning of acquisition, so the timeout is for
+                    # all the pictures and not between two pictures.
+                    elapsed = time.monotonic() - acquisition_start_time
+                    if elapsed < self.timeout:
+                        continue
+                    else:
+                        raise CameraTimeoutError(
+                            f"Timed out after {self.timeout * 1e3:.0f} ms without "
+                            f"receiving a trigger"
+                        )
+                else:
+                    raise RuntimeError(f"An error occurred during acquisition: {error}")
 
     def list_properties(self) -> list:
         result = []
@@ -175,31 +213,6 @@ class OrcaQuestCamera(Camera):
                 result.append((property_id, property_name))
             property_id = self._camera.prop_getnextid(property_id)
         return result
-
-    def _acquire_picture(self, frame: int) -> Image:
-        start_acquire = time.monotonic()
-        while True:
-            if self._camera.wait_capevent_frameready(1):
-                image = self._camera.buf_getframedata(frame)
-                if image is not None:
-                    return image.T
-                else:
-                    raise RuntimeError(
-                        f"Failed to get image data: {self._camera.lasterr()}"
-                    )
-            error = self._camera.lasterr()
-            if error.is_timeout():
-                elapsed = time.monotonic() - start_acquire
-                if elapsed < self.timeout:
-                    continue
-                else:
-                    raise CameraTimeoutError(
-                        f"Timed out after {self.timeout*1e3:.0f} ms without receiving "
-                        f"a trigger"
-                    )
-
-            else:
-                raise RuntimeError(f"An error occurred during acquisition: {error}")
 
     @classmethod
     def list_camera_infos(cls) -> list[dict[str, Any]]:
