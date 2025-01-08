@@ -1,18 +1,20 @@
 import contextlib
 import logging
 import time
-from typing import Any, ClassVar, Optional, Self
+from typing import Any, ClassVar, Optional, Self, assert_never
 
 from attrs import define, field
 from attrs.setters import frozen
 from attrs.validators import instance_of
-
 from caqtus.device.camera import Camera, CameraTimeoutError
 from caqtus.types.recoverable_exceptions import ConnectionFailedError
 from caqtus.utils import log_exception
 from caqtus.utils.context_managers import close_on_error
+from caqtus.types.image import is_image
+
 from . import dcam, dcamapi4
 from ._logger import logger
+from ..configuration.configuration import SensorMode, ReadoutSpeed
 
 BUFFER_SIZE = 10
 
@@ -23,15 +25,14 @@ class OrcaQuestCamera(Camera):
 
     Beware that not all roi values are allowed for this camera.
     In doubt, try to check if the ROI is valid using the HCImageLive software.
-
-    Attributes:
-        camera_number: The camera number used to identify the specific camera.
     """
 
     sensor_width: ClassVar[int] = 4096
     sensor_height: ClassVar[int] = 2304
 
     camera_number: int = field(validator=instance_of(int), on_setattr=frozen)
+    sensor_mode: SensorMode = field(on_setattr=frozen)
+    readout_speed: ReadoutSpeed = field(on_setattr=frozen)
 
     _camera: "dcam.Dcam" = field(init=False)
     _buffer_number_pictures: Optional[int] = field(init=False, default=None)
@@ -80,12 +81,29 @@ class OrcaQuestCamera(Camera):
                 f"can't set subarray mode off: {self._read_last_error()}"
             )
 
+        match self.sensor_mode:
+            case SensorMode.AREA:
+                sensor_mode = dcamapi4.DCAMPROP.SENSORMODE.AREA
+            case SensorMode.PHOTON_NUMBER_RESOLVING:
+                sensor_mode = dcamapi4.DCAMPROP.SENSORMODE.PHOTONNUMBERRESOLVING
+            case _:
+                assert_never(self.sensor_mode)
+
+        match self.readout_speed:
+            case ReadoutSpeed.SLOWEST:
+                readout_speed = dcamapi4.DCAMPROP.READOUTSPEED.SLOWEST
+            case ReadoutSpeed.FASTEST:
+                readout_speed = dcamapi4.DCAMPROP.READOUTSPEED.FASTEST
+            case _:
+                assert_never(self.readout_speed)
+
         properties = {
             dcamapi4.DCAM_IDPROP.SUBARRAYHPOS: self.roi.x,
             dcamapi4.DCAM_IDPROP.SUBARRAYHSIZE: self.roi.width,
             dcamapi4.DCAM_IDPROP.SUBARRAYVPOS: self.roi.y,
             dcamapi4.DCAM_IDPROP.SUBARRAYVSIZE: self.roi.height,
-            dcamapi4.DCAM_IDPROP.SENSORMODE: dcamapi4.DCAMPROP.SENSORMODE.AREA,
+            dcamapi4.DCAM_IDPROP.READOUTSPEED: readout_speed,
+            dcamapi4.DCAM_IDPROP.SENSORMODE: sensor_mode,
             dcamapi4.DCAM_IDPROP.TRIGGER_GLOBALEXPOSURE: dcamapi4.DCAMPROP.TRIGGER_GLOBALEXPOSURE.DELAYED,
         }
 
@@ -175,6 +193,7 @@ class OrcaQuestCamera(Camera):
                 # wait_capevent_frameready, so we need to handle possibly multiple
                 # pictures.
                 transfer_info = self._camera.cap_transferinfo()
+                assert transfer_info is not True
                 if not transfer_info:
                     raise RuntimeError(
                         f"Failed to get capture transfer info: {self._camera.lasterr()}"
@@ -184,8 +203,10 @@ class OrcaQuestCamera(Camera):
                 ):
                     logger.debug("Reading frame %d", frame)
                     image = self._camera.buf_getframedata(frame)
-                    if image is not None:
-                        yield image.T
+                    if image is not False:
+                        transposed = image.T
+                        assert is_image(transposed)
+                        yield transposed
                     else:
                         raise RuntimeError(
                             f"Failed to get image data: {self._camera.lasterr()}"

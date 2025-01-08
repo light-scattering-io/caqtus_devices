@@ -1,8 +1,9 @@
-from caqtus.device import DeviceName, DeviceParameter
+from caqtus.device import DeviceName
 from caqtus.device.camera import CameraCompiler
 from caqtus.shot_compilation import SequenceContext
 
 from .configuration import OrcaQuestCameraConfiguration
+from .configuration.configuration import SensorMode, ReadoutSpeed
 
 
 class OrcaQuestCompiler(CameraCompiler):
@@ -19,12 +20,13 @@ class OrcaQuestCompiler(CameraCompiler):
 
     class InitializationParams(CameraCompiler.CameraInitializationParameters):
         camera_number: int
+        sensor_mode: SensorMode
+        readout_speed: ReadoutSpeed
 
     def compile_initialization_parameters(self) -> InitializationParams:
         return self.InitializationParams(
             **super().compile_initialization_parameters(),
             camera_number=self.configuration.camera_number,
+            sensor_mode=self.configuration.sensor_mode,
+            readout_speed=self.configuration.readout_speed,
         )
-        # params = super().compile_initialization_parameters()
-        # params["camera_number"] = self.configuration.camera_number
-        # return params
