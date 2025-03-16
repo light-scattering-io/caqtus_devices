@@ -28,6 +28,24 @@ def test_0():
 
     assert restructured == configuration
 
+def test_can_load_old_channel_configuration():
+    # The '_type' key was not initially present when using only sine wave outputs,
+    # so we need to check that we can still load the old format.
+    data = {
+        "amplitude": "5 V",
+        "frequency": "122.8 MHz + probe.frequency/2",
+        "load": "High Z",
+        "offset": "0 V",
+        "output_enabled": True,
+    }
+    assert structure_channel_configuration(data, ChannelConfiguration) == SineWaveOutput(
+        amplitude=Expression("5 V"),
+        frequency=Expression("122.8 MHz + probe.frequency/2"),
+        load="High Z",
+        offset=Expression("0 V"),
+        output_enabled=True,
+    )
+
 
 def test_1():
     data = {
