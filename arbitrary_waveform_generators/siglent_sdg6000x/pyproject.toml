@@ -1,6 +1,6 @@
 [project]
 name = "caqtus-devices-siglent-sdg6000x"
-version = "2.7.0"
+version = "2.7.1"
 description = "Contains extension code for caqtus framework for siglent arbitrary waveform generators SDG6000X"
 authors = [
     { name = "light-scattering-io", email = "lecaqtus66@gmail.com" },

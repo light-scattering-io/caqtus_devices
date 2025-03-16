@@ -152,7 +152,7 @@ def structure_channel_configuration(
     if serialized == "ignore":
         return "ignore"
     if isinstance(serialized, dict):
-        if serialized.pop("_type") == "SineWaveOutput":
+        if serialized["_type"] == "SineWaveOutput":
             return structure_sine_wave_output(serialized, SineWaveOutput)
     raise ValueError(f"Unknown channel configuration: {serialized!r}")
 
